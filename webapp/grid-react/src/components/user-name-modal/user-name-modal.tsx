@@ -6,12 +6,13 @@ import './user-name-modal.scss';
 
 interface UserNameModalProps {
   isOpen: boolean;
-  onSubmit: (name: string) => void;
+  onSubmit: (name: string, icon?: string) => void;
   onClose?: () => void;
 }
 
 const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose }) => {
   const [userName, setUserName] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState('🙂');
 
   useEffect(() => {
     if (isOpen) {
@@ -27,7 +28,7 @@ const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose }) =>
     
 
     if (userName.trim()) {
-      onSubmit(userName.trim());
+      onSubmit(userName.trim(), selectedIcon);
     }
   };
 
@@ -61,6 +62,21 @@ const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose }) =>
                 autoFocus
                 maxLength={50}
               />
+            </div>
+            <div className="form-group">
+              <label className="label">Choose an Icon</label>
+              <div className="icon-grid">
+                {['🙂', '😀', '😎', '🧠', '👾', '🤖', '🦊', '🐱'].map((icon) => (
+                  <button
+                    key={icon}
+                    type="button"
+                    className={`icon-option ${selectedIcon === icon ? 'selected' : ''}`}
+                    onClick={() => setSelectedIcon(icon)}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div className="modal-footer">

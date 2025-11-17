@@ -1,0 +1,40 @@
+.ttt-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.ttt-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.ttt-row {
+  display: flex;
+  gap: 0.2rem;
+}
+.ttt-cell {
+  width: 60px;
+  height: 60px;
+  font-size: 2rem;
+  text-align: center;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+.ttt-cell:disabled {
+  background: #e0e0e0;
+  cursor: not-allowed;
+}
+.ttt-status {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+.ttt-players {
+  display: flex;
+  gap: 1rem;
+}
+.ttt-player-active {
+  color: #1976d2;
+  font-weight: bold;
+}
