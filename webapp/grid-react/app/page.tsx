@@ -1,18 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Gamelist from '../src/components/game-list/game-list';
 import CreateGameModal from '../src/components/create-game-modal/create-game-modal';
 import UserNameModal from '../src/components/user-name-modal/user-name-modal';
 import { getUserName, setUserName, getUserId, setUserId } from '../src/utils/userStorage';
+import { createSession, createUser, type Session } from '../src/utils/api';
 import '../src/App.css';
 
-const API_BASE_URL =
-  (process.env.NEXT_PUBLIC_API_BASE_URL &&
-    process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, '')) ||
-  '/api';
-
 export default function Home() {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUserNameModalOpen, setIsUserNameModalOpen] = useState(false);
   const [userName, setUserNameState] = useState<string | null>(null);
@@ -20,6 +18,7 @@ export default function Home() {
   const [userId, setUserIdState] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [pendingGameCreation, setPendingGameCreation] = useState(false);
+  const [createdSession, setCreatedSession] = useState<Session | null>(null);
 
   useEffect(() => {
     // Mark component as mounted (client-side only)
@@ -41,7 +40,7 @@ export default function Home() {
     // Check if user has a name before allowing game creation
     if (mounted && userName) {
       // User has a name, proceed with game creation
-      setIsModalOpen(true);
+    setIsModalOpen(true);
     } else {
       // User doesn't have a name, prompt for it first
       setPendingGameCreation(true);
@@ -49,31 +48,40 @@ export default function Home() {
     }
   };
 
-  const handleGameSubmit = (icon: string) => {
-    console.log('Creating game:', { icon });
-    // TODO: Add API call to create game
+  const handleGameSubmit = async (icon: string) => {
+    if (!userId) {
+      setPendingGameCreation(true);
+      setIsUserNameModalOpen(true);
+      return;
+    }
+
+    try {
+      setIsCreatingUser(true);
+      const session = await createSession({
+        hostId: userId,
+        hostName: userName || undefined,
+        gameIcon: icon,
+      });
+      console.log('Created session', session);
+      setIsModalOpen(false);
+      setCreatedSession(session);
+    } catch (error) {
+      console.error('Error creating session:', error);
+      alert('Failed to create session. Please try again.');
+    } finally {
+      setIsCreatingUser(false);
+    }
   };
 
   const handleUserNameSubmit = async (name: string) => {
     setIsCreatingUser(true);
     try {
-      // Call the create-user API
-      const response = await fetch(
-        `${API_BASE_URL}/create-user?name=${encodeURIComponent(name)}`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Failed to create user: ${response.statusText}`);
-      }
-      
-      const userData = await response.json();
-      
-      // Store user data locally
+      const userData = await createUser(name);
       setUserName(userData.name);
       setUserId(userData.id);
       setUserNameState(userData.name);
       setUserIdState(userData.id);
-      setIsUserNameModalOpen(false);
+    setIsUserNameModalOpen(false);
       
       // If user was trying to create a game, open the create game modal now
       if (pendingGameCreation) {
@@ -92,6 +100,41 @@ export default function Home() {
     <>
       <h1>Grid Game</h1>
       {mounted && userName && <p>Welcome back, {userName}!</p>}
+      {createdSession && (
+        <div className="card share-card">
+          <h3>Invite a friend</h3>
+          <p>Share this link so they can join your session:</p>
+          <div className="share-link">
+            <code>
+              {typeof window !== 'undefined'
+                ? `${window.location.origin}/join/${createdSession.id}`
+                : `/join/${createdSession.id}`}
+            </code>
+            <button
+              type="button"
+              onClick={() => {
+                const shareUrl =
+                  typeof window !== 'undefined'
+                    ? `${window.location.origin}/join/${createdSession.id}`
+                    : `${createdSession.id}`;
+                navigator.clipboard
+                  .writeText(shareUrl)
+                  .then(() => alert('Link copied to clipboard'))
+                  .catch(() => alert('Unable to copy link, please copy manually.'));
+              }}
+            >
+              Copy link
+            </button>
+          </div>
+          <button
+            className="button-primary"
+            type="button"
+            onClick={() => router.push(`/waiting/${createdSession.id}`)}
+          >
+            Continue to waiting room
+          </button>
+        </div>
+      )}
       <div className="card">
         <button onClick={createGame}>Create New Game</button>
       </div>

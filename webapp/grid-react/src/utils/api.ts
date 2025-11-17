@@ -32,11 +32,18 @@ export async function createUser(name: string, icon?: string) {
   });
 }
 
-export async function createSession(hostId: string) {
+type CreateSessionPayload = {
+  hostId: string;
+  hostName?: string;
+  hostIcon?: string | null;
+  gameIcon?: string | null;
+};
+
+export async function createSession(payload: CreateSessionPayload) {
   return await jsonFetch('/sessions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hostId }),
+    body: JSON.stringify(payload),
   }) as Session;
 }
 

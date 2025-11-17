@@ -36,10 +36,13 @@ Auth
 2) Create session
 - Method: POST
 - Path: `/sessions`
-- Description: Create a new game session. Caller becomes the host and the first player.
+- Description: Create a new game session. Caller becomes the host and the first player. The host picks an emoji/icon to identify this session in the lobby.
 - Request JSON:
   {
-    "hostId": "string"
+    "hostId": "string",
+    "hostName": "string",
+    "hostIcon": "string (optional)",
+    "gameIcon": "string (optional, emoji shown in lobby card)"
   }
 - Response 201:
   {
@@ -49,11 +52,37 @@ Auth
     "currentTurn": null,
     "board": [[null,null,null],[null,null,null],[null,null,null]],
     "moves": [],
+    "gameIcon": "string | null",
     "createdAt": "ISO8601"
   }
 - Errors: 400 (validation)
 
-3) Get session
+3) List sessions
+- Method: GET
+- Path: `/sessions`
+- Description: Return paginated sessions for the lobby. Default filters to sessions created in the last N hours (configurable) ordered by `createdAt DESC`.
+- Query params:
+  - `status` (optional, WAITING|ACTIVE|FINISHED) – filter by status
+  - `hostId` (optional) – sessions created by a host
+  - `limit` (default 20, max 100)
+  - `cursor` or `page` (optional) – paging token/number
+- Response 200:
+  {
+    "items": [
+      {
+        "id": "string",
+        "host": { "id": "string", "name": "string", "icon": "string | null" },
+        "gameIcon": "string | null",
+        "status": "WAITING" | "ACTIVE" | "FINISHED",
+        "players": [{ "id": "string", "name": "string", "icon": "string | null" }],
+        "createdAt": "ISO8601"
+      }
+    ],
+    "nextCursor": "string | null"
+  }
+- Errors: 400 (bad paging params)
+
+4) Get session
 - Method: GET
 - Path: `/sessions/{sessionId}`
 - Description: Return full session state (board, players, status, moves, winner/draw)
@@ -71,7 +100,7 @@ Auth
   }
 - Errors: 404 if not found
 
-4) Join session
+5) Join session
 - Method: POST
 - Path: `/sessions/{sessionId}/join`
 - Description: Add a player to a waiting session. When the second player joins, session becomes `ACTIVE` and `currentTurn` is set.
@@ -83,7 +112,7 @@ Auth
   - Returns updated Session object (see Get session response)
 - Errors: 400 if invalid (session finished, already full), 404 if session not found.
 
-5) Submit move
+6) Submit move
 - Method: POST
 - Path: `/sessions/{sessionId}/move`
 - Description: Submit a move. The server validates turn order and cell occupancy, updates game state, checks for win/draw, and returns updated session.
@@ -100,7 +129,7 @@ Auth
   - 409 Conflict — move invalid (cell already occupied, not player's turn)
   - 404 Not Found — session not found
 
-6) Leaderboard (optional)
+7) Leaderboard (optional)
 - Method: GET
 - Path: `/leaderboard?metric=win_count|efficiency&limit=3`
 - Description: Return top players ordered by `win_count` (desc) or `efficiency` (average moves per win; lower is better)

@@ -1,14 +1,15 @@
 """FastAPI application with database integration."""
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, List, Optional
+from typing import AsyncGenerator, Optional
 import uuid
 
 from fastapi import Depends, FastAPI, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import close_db, get_db, init_db
-from models import Game, User
+from models import Game, Session, User
 
 
 @asynccontextmanager
@@ -49,13 +50,42 @@ async def read_root():
     return {'Hello': 'World', 'database': 'connected'}
 
 
-@app.get('/create-user')
-async def create_user(
-    name: str, icon: Optional[str] = None, db: AsyncSession = Depends(get_db)
-):
+class CreateUserRequest(BaseModel):
+    name: str
+    icon: Optional[str] = None
+
+
+class CreateSessionRequest(BaseModel):
+    hostId: str
+    hostName: Optional[str] = None
+    hostIcon: Optional[str] = None
+    gameIcon: Optional[str] = None
+
+
+def serialize_session(session: Session) -> dict:
+    """Serialize session into API response shape."""
+    players = [
+        {'id': session.host_id, 'name': session.host_name, 'icon': session.host_icon}
+    ]
+    return {
+        'id': session.id,
+        'players': players,
+        'status': session.status,
+        'currentTurn': session.current_turn,
+        'board': [[None, None, None], [None, None, None], [None, None, None]],
+        'moves': [],
+        'winner': None,
+        'draw': False,
+        'gameIcon': session.game_icon,
+        'createdAt': session.created_at.isoformat() if session.created_at else None,
+    }
+
+
+@app.post('/users', status_code=status.HTTP_201_CREATED)
+async def create_user(payload: CreateUserRequest, db: AsyncSession = Depends(get_db)):
     """Create a new user using SQLAlchemy ORM."""
-    user = User(id=str(uuid.uuid4()), name=name, icon=icon)
-    
+    user = User(id=str(uuid.uuid4()), name=payload.name, icon=payload.icon)
+            
     db.add(user)
     try:
         await db.commit()
@@ -65,6 +95,41 @@ async def create_user(
 
     await db.refresh(user)
     return {'id': user.id, 'name': user.name, 'icon': user.icon}
+
+
+@app.post('/sessions', status_code=status.HTTP_201_CREATED)
+async def create_session(payload: CreateSessionRequest, db: AsyncSession = Depends(get_db)):
+    """Create a new session for the given host."""
+    result = await db.execute(select(User).where(User.id == payload.hostId))
+    host = result.scalar_one_or_none()
+    if not host:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'User with id {payload.hostId} not found',
+        )
+
+    host_name = payload.hostName or host.name
+    host_icon = payload.hostIcon if payload.hostIcon is not None else host.icon
+
+    session = Session(
+        id=str(uuid.uuid4()),
+        host_id=host.id,
+        host_name=host_name,
+        host_icon=host_icon,
+        game_icon=payload.gameIcon,
+        status='WAITING',
+        current_turn=None,
+    )
+
+    db.add(session)
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    await db.refresh(session)
+    return serialize_session(session)
 
 
 @app.get('/start-game')
