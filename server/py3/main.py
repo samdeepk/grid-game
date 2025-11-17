@@ -1,0 +1,130 @@
+"""FastAPI application with database integration."""
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator, List, Optional
+import uuid
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database import close_db, get_db, init_db
+from models import Game, User
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup - try to initialize DB, but don't fail if it doesn't work
+    # This allows the app to start even if there are connection issues
+    try:
+        await init_db()
+        print('✓ Database initialized successfully')
+    except Exception as e:
+        error_msg = str(e)
+        print(f'⚠ WARNING: Failed to initialize database: {error_msg}')
+        print('\nThe application will start, but database features will not work.')
+        print('Please check your .env file and ensure:')
+        print('1. DATABASE_URL and DIRECT_URL are set correctly')
+        print('2. Your Supabase password is correct')
+        print('3. If password has special characters, URL-encode them')
+        print('4. Verify your Supabase database is accessible')
+        print('\nYou can test the connection with: python debug_connection.py')
+        # Don't raise - allow app to start without DB
+    
+    yield
+    
+    # Shutdown
+    try:
+        await close_db()
+    except Exception:
+        pass  # Ignore errors on shutdown
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.get('/')
+async def read_root():
+    """Root endpoint."""
+    return {'Hello': 'World', 'database': 'connected'}
+
+
+@app.get('/create-user')
+async def create_user(
+    name: str, icon: Optional[str] = None, db: AsyncSession = Depends(get_db)
+):
+    """Create a new user using SQLAlchemy ORM."""
+    user = User(id=str(uuid.uuid4()), name=name, icon=icon)
+    
+    db.add(user)
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    await db.refresh(user)
+    return {'id': user.id, 'name': user.name, 'icon': user.icon}
+
+
+@app.get('/start-game')
+async def start_game(
+    user_id: str,
+    name: str,
+    icon: str = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Start a new game."""
+    # Ensure the user exists before creating a game
+    result = await db.execute(select(User.id).where(User.id == user_id))
+    existing_user = result.scalar_one_or_none()
+    if existing_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'User with id {user_id} not found',
+        )
+
+    game = Game(id=str(uuid.uuid4()), user_id=user_id, name=name, icon=icon, status='active')
+    db.add(game)
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+    await db.refresh(game)
+    return {'id': game.id, 'name': game.name, 'status': game.status}
+
+
+@app.get('/join-game')
+async def join_game():
+    """Join an existing game."""
+    pass
+
+
+@app.get('/make-move')
+async def make_move():
+    """Make a move in a game."""
+    pass
+
+
+@app.get('/game-list')
+async def game_list(user_id: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    """Get list of games."""
+    if user_id:
+        stmt = select(Game).where(Game.user_id == user_id)
+    else:
+        stmt = select(Game)
+
+    result = await db.execute(stmt)
+    games = result.scalars().all()
+    return [
+        {'id': game.id, 'name': game.name, 'icon': game.icon, 'status': game.status}
+        for game in games
+    ]
+
+
+@app.get('/leaderboard')
+async def leaderboard():
+    """Get leaderboard."""
+    pass
