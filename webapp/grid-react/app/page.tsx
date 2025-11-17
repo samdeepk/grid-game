@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Gamelist from '../src/components/game-list/game-list';
 import CreateGameModal from '../src/components/create-game-modal/create-game-modal';
 import UserNameModal from '../src/components/user-name-modal/user-name-modal';
-import { getUserName, setUserName, getUserId, setUserId } from '../src/utils/userStorage';
+import { getUserName, setUserName, getUserId, setUserId, setUserIcon } from '../src/utils/userStorage';
 import { createSession, createUser, type Session } from '../src/utils/api';
 import '../src/App.css';
 
@@ -73,14 +73,17 @@ export default function Home() {
     }
   };
 
-  const handleUserNameSubmit = async (name: string) => {
+  const handleUserNameSubmit = async (name: string, icon?: string) => {
     setIsCreatingUser(true);
     try {
-      const userData = await createUser(name);
+      const userData = await createUser(name, icon);
       setUserName(userData.name);
       setUserId(userData.id);
       setUserNameState(userData.name);
       setUserIdState(userData.id);
+      if (userData.icon) {
+        setUserIcon(userData.icon);
+      }
     setIsUserNameModalOpen(false);
       
       // If user was trying to create a game, open the create game modal now
@@ -153,9 +156,10 @@ export default function Home() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleGameSubmit}
       />
-      <UserNameModal 
-        isOpen={isUserNameModalOpen} 
+      <UserNameModal
+        isOpen={isUserNameModalOpen}
         onSubmit={handleUserNameSubmit}
+        isLoading={isCreatingUser}
         onClose={() => {
           setIsUserNameModalOpen(false);
           // Reset pending game creation if user closes modal without submitting

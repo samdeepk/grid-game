@@ -3,53 +3,81 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import UserNameModal from '../../../src/components/user-name-modal/user-name-modal';
-import { getUserName, setUser, getUserId } from '../../../src/utils/userStorage';
-import { joinSession as apiJoinSession, getSession as apiGetSession } from '../../../src/utils/api';
-// Use browser crypto uuid when available
-function genId() {
-  return typeof crypto !== 'undefined' && (crypto as any).randomUUID
-    ? (crypto as any).randomUUID()
-    : Math.random().toString(36).slice(2, 9);
-}
+import { getUserName, getUserId, setUser } from '../../../src/utils/userStorage';
+import {
+  joinSession as apiJoinSession,
+  getSession as apiGetSession,
+  createUser as apiCreateUser,
+} from '../../../src/utils/api';
 
 export default function JoinPage({ params }: { params: { gameId: string } }) {
   const { gameId } = params;
   const router = useRouter();
-  const [isNameModal, setIsNameModal] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
   useEffect(() => {
     const run = async () => {
-        const s = await apiGetSession(gameId);
-        if (!s) {
+      try {
+        await apiGetSession(gameId);
+      } catch (err) {
         alert('Session not found.');
         router.push('/');
         return;
-        }
-        const userName = getUserName();
-        if (!userName) {
-            setIsNameModal(true);
-        } else {
-            // try to join using existing user
-            const id = getUserId() ?? genId();
-            setUser(id, userName);
-            const me = { id, name: userName, icon: null };
-            await apiJoinSession(gameId, id);
-            router.push(`/game/${gameId}`);
-        }
-    }
+      }
+
+      const storedName = getUserName();
+      const storedId = getUserId();
+
+      if (!storedName || !storedId) {
+        setShowNameModal(true);
+        return;
+      }
+
+      await attemptJoin(storedId, storedName);
+    };
     run();
   }, [gameId]);
 
-  const onSubmitName = async (name: string, icon?: string) => {
-    const id = getUserId() ?? genId();
-    setUser(id, name, icon);
-    await apiJoinSession(gameId, id);
-    router.push(`/game/${gameId}`);
+  const attemptJoin = async (id: string, name: string) => {
+    setIsJoining(true);
+    try {
+      await apiJoinSession(gameId, id);
+      router.push(`/waiting/${gameId}`);
+    } catch (error) {
+      console.error('Failed to join session', error);
+      alert('Unable to join session. Please try again.');
+      setShowNameModal(true);
+    } finally {
+      setIsJoining(false);
+    }
   };
 
-  return isNameModal ? (
-    <UserNameModal isOpen onSubmit={onSubmitName} onClose={() => router.push('/')} />
-  ) : (
-    <div>Joining game...</div>
-  );
+  const onSubmitName = async (name: string, icon?: string) => {
+    setIsJoining(true);
+    try {
+      const newUser = await apiCreateUser(name, icon);
+      setUser(newUser.id, newUser.name, newUser.icon ?? undefined);
+      await apiJoinSession(gameId, newUser.id);
+      router.push(`/waiting/${gameId}`);
+    } catch (error) {
+      console.error('Failed to create user / join session', error);
+      alert('Unable to join session. Please try again.');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  if (showNameModal) {
+    return (
+      <UserNameModal
+        isOpen
+        onSubmit={onSubmitName}
+        isLoading={isJoining}
+        onClose={() => router.push('/')}
+      />
+    );
+  }
+
+  return <div>{isJoining ? 'Joining game...' : 'Loading session...'}</div>;
 }

@@ -8,15 +8,17 @@ interface UserNameModalProps {
   isOpen: boolean;
   onSubmit: (name: string, icon?: string) => void;
   onClose?: () => void;
+  isLoading?: boolean;
 }
 
-const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose }) => {
+const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose, isLoading = false }) => {
   const [userName, setUserName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('🙂');
 
   useEffect(() => {
     if (isOpen) {
       setUserName('');
+      setSelectedIcon('🙂');
     }
   }, [isOpen]);
 
@@ -61,6 +63,7 @@ const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose }) =>
                 required
                 autoFocus
                 maxLength={50}
+                disabled={isLoading}
               />
             </div>
             <div className="form-group">
@@ -80,8 +83,8 @@ const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose }) =>
             </div>
           </div>
           <div className="modal-footer">
-            <button className="button-primary" type="submit" disabled={!userName.trim()}>
-              Continue
+            <button className="button-primary" type="submit" disabled={!userName.trim() || isLoading}>
+              {isLoading ? 'Saving...' : 'Continue'}
             </button>
           </div>
         </form>
