@@ -7,7 +7,10 @@ import UserNameModal from '../src/components/user-name-modal/user-name-modal';
 import { getUserName, setUserName, getUserId, setUserId } from '../src/utils/userStorage';
 import '../src/App.css';
 
-const API_BASE_URL = '';
+const API_BASE_URL =
+  (process.env.NEXT_PUBLIC_API_BASE_URL &&
+    process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, '')) ||
+  '/api';
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
