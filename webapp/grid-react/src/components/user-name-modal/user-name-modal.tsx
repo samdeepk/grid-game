@@ -7,9 +7,10 @@ import './user-name-modal.scss';
 interface UserNameModalProps {
   isOpen: boolean;
   onSubmit: (name: string) => void;
+  onClose?: () => void;
 }
 
-const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit }) => {
+const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose }) => {
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
@@ -22,13 +23,22 @@ const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    
+
     if (userName.trim()) {
       onSubmit(userName.trim());
     }
   };
 
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" onClick={handleClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">Welcome to Grid Game!</h2>

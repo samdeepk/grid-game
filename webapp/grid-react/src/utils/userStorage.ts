@@ -1,4 +1,5 @@
 const USER_NAME_KEY = 'grid-game-user-name';
+const USER_ID_KEY = 'grid-game-user-id';
 
 export const getUserName = (): string | null => {
   if (typeof window === 'undefined') return null;
@@ -12,5 +13,21 @@ export const setUserName = (name: string): void => {
 
 export const hasUserName = (): boolean => {
   return getUserName() !== null;
+};
+
+export const getUserId = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(USER_ID_KEY);
+};
+
+export const setUserId = (id: string): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(USER_ID_KEY, id);
+};
+
+export const clearUser = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(USER_NAME_KEY);
+  localStorage.removeItem(USER_ID_KEY);
 };
 
