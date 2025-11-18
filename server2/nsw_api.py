@@ -9,6 +9,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from nws_utils import get_coordinates_from_address
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -221,7 +223,24 @@ class NWSWeatherAPI:
         Returns:
             Dict: Weather forecast data.
         """
-        raise NotImplementedError("Implement me")
+        if not query:
+            raise ValidationError("Query must be a non-empty string")
+
+        query = query.strip()
+        parts = [p for p in query.replace(',', ' ').split() if p]
+        if len(parts) == 2:
+            try:
+                lat = float(parts[0])
+                lon = float(parts[1])
+                return self.get_forecast(lat, lon, hourly=hourly)
+            except ValueError:
+                pass
+
+        coords = get_coordinates_from_address(query)
+        if not coords:
+            raise ValidationError("Unable to determine coordinates for query.")
+
+        return self.get_forecast(coords.latitude, coords.longitude, hourly=hourly)
 
     
     def get_forecast(self, latitude: float, longitude: float, hourly: bool = False) -> Dict:
@@ -280,6 +299,23 @@ class NWSWeatherAPI:
         """
         endpoint = f"gridpoints/{wfo}/{x},{y}/{'forecast/hourly' if hourly else 'forecast'}"
         return self._make_request(endpoint)
+    
+    def _parse_coordinate_query(self, query: str) -> Optional[Tuple[float, float]]:
+        """
+        Attempt to parse a latitude/longitude pair from the provided query string.
+        Accepts common delimiters such as comma or whitespace.
+        """
+        parts = [p for p in query.replace(',', ' ').split() if p]
+        if len(parts) == 2:
+            try:
+                lat = float(parts[0])
+                lon = float(parts[1])
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                    raise ValueError
+                return lat, lon
+            except ValueError:
+                return None
+        return None
     
     def get_alerts(
         self, 

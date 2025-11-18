@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Union, Tuple
+import requests
 
 from weather_models import (
     Coordinates, Temperature, Wind, Precipitation, 
@@ -190,15 +191,27 @@ def get_coordinates_from_address(address: str) -> Optional[Coordinates]:
     Returns:
         Optional[Coordinates]: Coordinates for the address, or None if geocoding failed.
     """
-    try:
-        # This is a placeholder. In a real implementation, you would use a geocoding service
-        # like Google Maps, Nominatim, or similar.
+    # quick hacky geocoder - not production ready
+    if not address:
+        return None
 
-        
-        # For now, return None to indicate that geocoding is not implemented
-        return None
+    try:
+        lat, lon = [float(part) for part in address.split(',')]
+        return Coordinates(latitude=lat, longitude=lon)
     except Exception:
+        pass
+
+    resp = requests.get(
+        'https://nominatim.openstreetmap.org/search',
+        params={'q': address, 'format': 'json'},
+        headers={'User-Agent': 'GridGameWeather/0.1'},
+        timeout=3,
+    )
+    data = resp.json()
+    if not data:
         return None
+    first = data[0]
+    return Coordinates(latitude=float(first['lat']), longitude=float(first['lon']))
 
 def celsius_to_fahrenheit(celsius: float) -> float:
     """
