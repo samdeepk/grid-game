@@ -100,11 +100,13 @@ async def create_user(payload: CreateUserRequest, db: AsyncSession = Depends(get
 @app.post('/sessions', status_code=status.HTTP_201_CREATED)
 async def create_session(payload: CreateSessionRequest, db: AsyncSession = Depends(get_db)):
     """Create a new session for the given host."""
+    print("payload.hostId ====> ", payload.hostId)
     result = await db.execute(select(User).where(User.id == payload.hostId))
+    print("payload.hostId ====> ", result)
     host = result.scalar_one_or_none()
     if not host:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f'User with id {payload.hostId} not found',
         )
 

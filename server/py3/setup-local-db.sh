@@ -33,7 +33,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
 # Start PostgreSQL container
-echo "📦 Starting PostgreSQL container..."
+echo "📦 Starting PostgreSQL container..." . $COMPOSE_CMD
 $COMPOSE_CMD up -d postgres
 
 # Wait for PostgreSQL to be ready
