@@ -5,6 +5,13 @@ ENV_FILE="/app/.env"
 
 mkdir -p "$(dirname "${ENV_FILE}")"
 
+
+echo "**************"
+echo "**************"
+echo "**************"
+echo "DIRECT_URL: ${DIRECT_URL}"
+echo "DATABASE_URL : ${DATABASE_URL}"
+
 # Determine values so .env always has what backend expects
 direct_value="${DIRECT_URL:-}"
 database_value="${DATABASE_URL:-${direct_value}}"
