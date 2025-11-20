@@ -35,6 +35,62 @@
 
 .card {
   padding: 2em;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  h2, h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: #111827;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+}
+
+.home-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.error-message {
+  color: #dc2626;
+  margin-bottom: 12px;
+  font-size: 0.875rem;
+}
+
+.button-primary {
+  padding: 10px 24px;
+  background-color: #3b82f6;
+  color: white;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background-color: #2563eb;
+    border-color: #2563eb;
+  }
+
+  &:disabled {
+    background-color: #9ca3af;
+    border-color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 }
 
 .read-the-docs {

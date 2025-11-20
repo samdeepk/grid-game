@@ -1,0 +1,94 @@
+.session-list-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 12px;
+
+  &:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .session-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+
+  .session-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .session-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 12px;
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &.status-waiting {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+
+    &.status-active {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+
+    &.status-finished {
+      background-color: #e5e7eb;
+      color: #374151;
+    }
+  }
+
+  .session-date {
+    font-size: 0.875rem;
+    color: #6b7280;
+    white-space: nowrap;
+  }
+
+  .session-players {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .player-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background-color: #f3f4f6;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: #374151;
+  }
+
+  .you-badge {
+    padding: 2px 6px;
+    background-color: #3b82f6;
+    color: white;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 4px;
+  }
+}
+

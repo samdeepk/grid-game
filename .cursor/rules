@@ -1,0 +1,291 @@
+# Project: grid-game – Frontend for Two-Player Grid Game Engine
+
+You are an AI coding assistant working inside the repository `grid-game`.
+The backend will be implemented separately. Your job is to build the **frontend** in React + TypeScript using Next.js and SCSS under `webapp/grid-react/` directory.
+
+## High-Level Product Idea
+
+We are building a small web UI for a generic **two-player grid game engine**.
+
+- Examples: Tic-Tac-Toe, later Connect Four / Chess.
+- Each game session has one **host** (creator) and one **guest** (second player). Others can be **viewers**.
+- There is **no real authentication**. We use a simple browser-based "user session":
+  - User enters a display name once.
+  - We store `{ id, name, icon }` in `localStorage` using separate keys: `grid-game-user-id`, `grid-game-user-name`, `grid-game-user-icon`.
+- Frontend talks to a REST API (described below) for users, sessions, and moves.
+
+## Frontend Stack
+
+- React + TypeScript + Next.js 15 in `webapp/grid-react/`.
+- SCSS for styling (keep the UI clean and minimal).
+- Next.js App Router for routing:
+  - `/` – Home page
+  - `/game/:sessionId` – Game page
+  - `/join/:gameId` – Join page
+  - `/waiting/:sessionId` – Waiting room
+
+## API Contract
+
+Base path: `/api` (proxied to backend via Next.js rewrites).
+
+**We do NOT rely on server-side sessions; we manage the user in localStorage, but we call the backend to create the user record.**
+
+### Users
+
+- `POST /api/users`
+  - Body: `{ "name": string, "icon"?: string }`
+  - Response: `{ "id": string, "name": string, "icon": string | null }`
+
+### Sessions
+
+The API uses "sessions" instead of "games" to represent game instances.
+
+- `POST /api/sessions`
+  - Body:
+    ```json
+    {
+      "hostId": "string",
+      "hostName": "string (optional)",
+      "hostIcon": "string (optional)",
+      "gameIcon": "string (optional, emoji shown in lobby)"
+    }
+    ```
+  - Response:
+    ```json
+    {
+      "id": "session-id",
+      "players": [{ "id": "string", "name": "string", "icon": "string" }],
+      "status": "WAITING" | "ACTIVE" | "FINISHED",
+      "currentTurn": "string | null",
+      "board": [[null,null,null],[null,null,null],[null,null,null]],
+      "moves": [],
+      "winner": "string | null",
+      "draw": boolean,
+      "gameIcon": "string | null",
+      "createdAt": "ISO8601"
+    }
+    ```
+
+- `GET /api/sessions/:sessionId`
+  - Response:
+    ```json
+    {
+      "id": "session-id",
+      "players": [{ "id": "string", "name": "string", "icon": "string" }],
+      "status": "WAITING" | "ACTIVE" | "FINISHED",
+      "currentTurn": "string | null",
+      "board": [["string|null"]],
+      "moves": [{ "playerId": "string", "row": 0-2, "col": 0-2, "moveNo": number }],
+      "winner": "string | null",
+      "draw": boolean,
+      "createdAt": "ISO8601"
+    }
+    ```
+
+- `POST /api/sessions/:sessionId/join`
+  - Body:
+    ```json
+    {
+      "playerId": "string"
+    }
+    ```
+  - Response: Updated session object (same shape as `GET`).
+
+- `POST /api/sessions/:sessionId/move`
+  - Body:
+    ```json
+    {
+      "playerId": "string",
+      "row": 0-2,
+      "col": 0-2
+    }
+    ```
+  - Response: Updated session object (same shape as `GET`).
+
+**Note**: The backend API contract is documented in `server/API_CONTRACT.md`. Some endpoints may not be fully implemented yet.
+
+## Required Frontend Features
+
+### 1. Project Setup
+
+- Frontend is in `webapp/grid-react/` using Next.js 15 + React + TypeScript.
+- SCSS for styling (no Tailwind CSS).
+- Add scripts in `webapp/grid-react/package.json`:
+  - `"dev"` – Start Next.js dev server
+  - `"build"` – Build for production
+  - `"start"` – Start production server
+  - `"lint"` – Run ESLint
+  - `"format"` – Format with Prettier
+
+### 2. Routing
+
+- Use Next.js App Router (file-based routing):
+  - `app/page.tsx` – Home page (`/`)
+  - `app/game/[sessionId]/page.tsx` – Game page (`/game/:sessionId`)
+  - `app/join/[gameId]/page.tsx` – Join page (`/join/:gameId`)
+  - `app/waiting/[sessionId]/page.tsx` – Waiting room (`/waiting/:sessionId`)
+
+### 3. User Session Handling
+
+- User storage utilities in `src/utils/userStorage.ts`:
+  - `getUserName()`, `setUserName(name)` – localStorage key: `grid-game-user-name`
+  - `getUserId()`, `setUserId(id)` – localStorage key: `grid-game-user-id`
+  - `getUserIcon()`, `setUserIcon(icon)` – localStorage key: `grid-game-user-icon`
+  - `setUser(id, name, icon?)` – Helper to set all at once
+  - `clearUser()` – Clear all user data
+
+- Component `UserNameModal` (`src/components/user-name-modal/user-name-modal.tsx`):
+  - Shows overlay asking for display name and icon selection.
+  - On submit:
+    - Call `POST /api/users` with `{ name, icon }`.
+    - Store `{ id, name, icon }` in localStorage using utility functions.
+    - Dismiss modal.
+
+### 4. Home Page (`/`)
+
+- Located in `app/page.tsx`.
+- If no user exists, show `UserNameModal` when needed (triggered by game list or create game action).
+- Once a user exists:
+  - Show welcome message: "Welcome back, {name}!"
+  - Show "Create New Game" button.
+  - On click "Create game":
+    - Open `CreateGameModal` to select game icon.
+    - Call `POST /api/sessions` with `{ hostId, hostName, gameIcon }`.
+    - Show share link card with:
+      - Link: `/join/:sessionId`
+      - "Copy link" button using Clipboard API.
+      - "Continue to waiting room" button → navigates to `/waiting/:sessionId`.
+  - Show `GameList` component for games user has watched, started, or played.
+
+### 5. Join Page (`/join/:gameId`)
+
+- Located in `app/join/[gameId]/page.tsx`.
+- If no user exists, show `UserNameModal`.
+- Once user exists:
+  - Verify session exists via `GET /api/sessions/:sessionId`.
+  - Automatically call `POST /api/sessions/:sessionId/join` with `{ playerId }`.
+  - Navigate to `/waiting/:sessionId` on success.
+
+### 6. Waiting Room (`/waiting/:sessionId`)
+
+- Located in `app/waiting/[sessionId]/page.tsx`.
+- Shows `WaitingRoom` component that:
+  - Polls session state.
+  - Shows players who have joined.
+  - When second player joins, session becomes ACTIVE.
+  - Navigate to `/game/:sessionId` when game starts.
+
+### 7. Game Page (`/game/:sessionId`)
+
+- Located in `app/game/[sessionId]/page.tsx`.
+- Behavior:
+  - Ensure user session exists; if not, redirect or show modal.
+  - On mount, fetch session via `GET /api/sessions/:sessionId`.
+  - Implement polling using `pollSession()` function from `src/utils/api.ts`:
+    - Re-fetches every ~1.2 seconds.
+    - Updates game state on each poll.
+
+- Rendering (via `TicTacToe` component):
+  - `PlayerInfo` component: Shows player names and icons, indicates current turn.
+  - `GameStatus` component: Shows game status (waiting, active, finished, winner, draw).
+  - `GameBoard` component: 3×3 grid:
+    - Displays player moves (using player icons or identifiers).
+    - Disables clicks when:
+      - Game is finished (winner or draw).
+      - Not current player's turn.
+      - User is a viewer.
+  - On cell click (when allowed):
+    - Call `POST /api/sessions/:sessionId/move` with `{ playerId, row, col }`.
+    - Polling will update state automatically.
+
+- Status / result:
+  - If `session.winner` is set:
+    - Show winner name via `GameStatus`.
+  - If `session.draw == true`:
+    - Show "Draw!" via `GameStatus`.
+  - Otherwise:
+    - Show current turn or waiting status via `GameStatus`.
+
+- Share link:
+  - Share link is shown on home page after creating a session.
+  - Link format: `/join/:sessionId`.
+
+### 8. Code Quality
+
+- Use TypeScript types/interfaces for:
+  - `Player` type: `{ id: string, name: string, icon?: string }`
+  - `Session` type: `{ id, players, status, currentTurn, board, moves, winner, draw, ... }`
+  - `GameState` type (in `tic-tac-toe/types.ts`): `{ board, currentTurn, players, winner, draw }`
+  - `Move` type: `{ row, col, player }`
+- Keep UI simple but clean using SCSS.
+- Prefer small, focused components:
+  - `TicTacToe` – Main game component
+  - `GameBoard` – 3×3 grid rendering
+  - `GameStatus` – Status/result display
+  - `PlayerInfo` – Player names and turn indicator
+  - `UserNameModal` – User setup
+  - `CreateGameModal` – Game creation
+  - `WaitingRoom` – Waiting room UI
+  - `GameList` – List of games
+
+### 9. Developer Experience
+
+- Ensure `cd webapp/grid-react && npm install && npm run dev` starts the app.
+- Document basic usage in `webapp/grid-react/README.md`:
+  - How to run dev server (`pnpm dev` or `npm run dev`).
+  - Environment variables:
+    - `NEXT_PUBLIC_API_BASE_URL` (default: `/api`)
+    - `NEXT_PUBLIC_API_PROXY_TARGET` (default: `http://127.0.0.1:8000`)
+  - API proxy configuration in `next.config.js`.
+
+## Important Constraints
+
+- Do NOT implement backend logic; assume API exists as described.
+- Focus on a smooth flow for:
+  1. Setting up a user (name + icon).
+  2. Creating a session (with game icon).
+  3. Sharing link (`/join/:sessionId`).
+  4. Joining as player (via join page).
+  5. Taking turns on a 3×3 grid.
+
+## API Client Implementation
+
+- API client utilities in `src/utils/api.ts`:
+  - `createUser(name, icon?)` – POST /api/users
+  - `createSession(payload)` – POST /api/sessions
+  - `getSession(sessionId)` – GET /api/sessions/:sessionId
+  - `joinSession(sessionId, playerId)` – POST /api/sessions/:sessionId/join
+  - `makeMove(sessionId, playerId, row, col)` – POST /api/sessions/:sessionId/move
+  - `pollSession(sessionId, callback, intervalMs)` – Polling utility function
+
+## Project Structure
+
+```
+webapp/grid-react/
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Home page
+│   ├── game/
+│   │   └── [sessionId]/
+│   │       └── page.tsx   # Game page
+│   ├── join/
+│   │   └── [gameId]/
+│   │       └── page.tsx   # Join page
+│   └── waiting/
+│       └── [sessionId]/
+│           └── page.tsx   # Waiting room
+├── src/
+│   ├── components/        # React components
+│   │   ├── tic-tac-toe/   # TicTacToe game components
+│   │   ├── user-name-modal/
+│   │   ├── create-game-modal/
+│   │   ├── waiting-room/
+│   │   └── game-list/
+│   ├── utils/             # Utility functions
+│   │   ├── api.ts         # API client
+│   │   └── userStorage.ts # localStorage utilities
+│   └── *.css              # Global styles
+├── public/                # Static assets
+├── next.config.js         # Next.js config (API proxy)
+└── package.json
+```

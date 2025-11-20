@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Gamelist from '../src/components/game-list/game-list';
 import CreateGameModal from '../src/components/create-game-modal/create-game-modal';
 import UserNameModal from '../src/components/user-name-modal/user-name-modal';
+import { JoinGameByCode } from '../src/components/join-game-by-code/join-game-by-code';
 import { getUserName, setUserName, getUserId, setUserId, setUserIcon } from '../src/utils/userStorage';
 import { createSession, createUser, type Session } from '../src/utils/api';
 import '../src/App.css';
@@ -19,6 +20,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [pendingGameCreation, setPendingGameCreation] = useState(false);
   const [createdSession, setCreatedSession] = useState<Session | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
     // Mark component as mounted (client-side only)
@@ -32,8 +34,10 @@ export default function Home() {
     }
     if (storedUserId) {
       setUserIdState(storedUserId);
+    } else {
+      // If no user ID exists, automatically show user name modal (blocking)
+      setIsUserNameModalOpen(true);
     }
-    // Don't auto-open user name modal - let game-list handle it when there are no games
   }, []);
 
   const createGame = () => {
@@ -65,6 +69,8 @@ export default function Home() {
       console.log('Created session', session);
       setIsModalOpen(false);
       setCreatedSession(session);
+      // Navigate to waiting room after creating session
+      router.push(`/waiting/${session.id}`);
     } catch (error) {
       console.error('Error creating session:', error);
       alert('Failed to create session. Please try again.');
@@ -99,70 +105,72 @@ export default function Home() {
     }
   };
 
+  // Don't render main content if user modal is open and user hasn't been set up yet
+  if (mounted && !userId && isUserNameModalOpen) {
+    return (
+      <>
+        <UserNameModal
+          isOpen={isUserNameModalOpen}
+          onSubmit={handleUserNameSubmit}
+          isLoading={isCreatingUser}
+          onClose={undefined} // Blocking - no close button
+          isBlocking={true}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <h1>Grid Game</h1>
       {mounted && userName && <p>Welcome back, {userName}!</p>}
-      {createdSession && (
-        <div className="card share-card">
-          <h3>Invite a friend</h3>
-          <p>Share this link so they can join your session:</p>
-          <div className="share-link">
-            <code>
-              {typeof window !== 'undefined'
-                ? `${window.location.origin}/join/${createdSession.id}`
-                : `/join/${createdSession.id}`}
-            </code>
-            <button
-              type="button"
-              onClick={() => {
-                const shareUrl =
-                  typeof window !== 'undefined'
-                    ? `${window.location.origin}/join/${createdSession.id}`
-                    : `${createdSession.id}`;
-                navigator.clipboard
-                  .writeText(shareUrl)
-                  .then(() => alert('Link copied to clipboard'))
-                  .catch(() => alert('Unable to copy link, please copy manually.'));
-              }}
-            >
-              Copy link
-            </button>
-          </div>
-          <button
-            className="button-primary"
-            type="button"
-            onClick={() => router.push(`/waiting/${createdSession.id}`)}
-          >
-            Continue to waiting room
+      
+      <div className="home-actions">
+        <div className="card">
+          <h3>Join Game by Code</h3>
+          {joinError && (
+            <div className="error-message">
+              {joinError}
+            </div>
+          )}
+          <JoinGameByCode
+            onError={(message) => {
+              setJoinError(message);
+              setTimeout(() => setJoinError(null), 5000);
+            }}
+          />
+        </div>
+
+        <div className="card">
+          <h3>Create New Game</h3>
+          <button onClick={createGame} className="button-primary" style={{ width: '100%', marginTop: '8px' }}>
+            Create New Game
           </button>
         </div>
-      )}
+      </div>
+
       <div className="card">
-        <button onClick={createGame}>Create New Game</button>
+        <h2>Your Games</h2>
+        <p style={{ color: '#6b7280', marginBottom: '16px', fontSize: '0.875rem' }}>
+          Games you watched, started or played
+        </p>
+        <Gamelist
+          onOpenCreateGameModal={createGame}
+          onOpenUserNameModal={() => setIsUserNameModalOpen(true)}
+        />
       </div>
-      <div>
-        <h2>Games</h2>
-        <section>
-          <h3>Games you watched, started or played</h3>
-          <Gamelist
-            onOpenCreateGameModal={createGame}
-            onOpenUserNameModal={() => setIsUserNameModalOpen(true)}
-          />
-        </section>
-      </div>
+
       <CreateGameModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleGameSubmit}
       />
       <UserNameModal
-        isOpen={isUserNameModalOpen}
+        isOpen={isUserNameModalOpen && !!userId}
         onSubmit={handleUserNameSubmit}
         isLoading={isCreatingUser}
         onClose={() => {
           setIsUserNameModalOpen(false);
-          // Reset pending game creation if user closes modal without submitting
           setPendingGameCreation(false);
         }}
       />

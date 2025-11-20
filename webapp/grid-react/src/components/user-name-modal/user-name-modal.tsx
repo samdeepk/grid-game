@@ -9,9 +9,10 @@ interface UserNameModalProps {
   onSubmit: (name: string, icon?: string) => void;
   onClose?: () => void;
   isLoading?: boolean;
+  isBlocking?: boolean; // If true, modal cannot be closed without submitting
 }
 
-const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose, isLoading = false }) => {
+const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose, isLoading = false, isBlocking = false }) => {
   const [userName, setUserName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('🙂');
 
@@ -41,10 +42,15 @@ const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose, isLo
   };
 
   return (
-    <div className="modal-overlay" onClick={handleClose}>
+    <div className="modal-overlay" onClick={isBlocking ? undefined : handleClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">Welcome to Grid Game!</h2>
+          {!isBlocking && onClose && (
+            <button className="close-button" onClick={handleClose} type="button">
+              ×
+            </button>
+          )}
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">

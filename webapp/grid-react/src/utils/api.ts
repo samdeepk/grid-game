@@ -24,6 +24,20 @@ export type Session = {
   draw?: boolean;
 };
 
+export type SessionListItem = {
+  id: string;
+  host: { id: string; name: string; icon: string | null };
+  gameIcon: string | null;
+  status: 'WAITING' | 'ACTIVE' | 'FINISHED';
+  players: Player[];
+  createdAt: string;
+};
+
+export type SessionsListResponse = {
+  items: SessionListItem[];
+  nextCursor: string | null;
+};
+
 export async function createUser(name: string, icon?: string) {
   return await jsonFetch('/users', {
     method: 'POST',
@@ -65,6 +79,23 @@ export async function makeMove(sessionId: string, playerId: string, row: number,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ playerId, row, col }),
   }) as Session;
+}
+
+export async function listSessions(params?: {
+  status?: 'WAITING' | 'ACTIVE' | 'FINISHED';
+  hostId?: string;
+  limit?: number;
+  cursor?: string;
+}): Promise<SessionsListResponse> {
+  const queryParams = new URLSearchParams();
+  if (params?.status) queryParams.append('status', params.status);
+  if (params?.hostId) queryParams.append('hostId', params.hostId);
+  if (params?.limit) queryParams.append('limit', params.limit.toString());
+  if (params?.cursor) queryParams.append('cursor', params.cursor);
+
+  const queryString = queryParams.toString();
+  const path = `/sessions${queryString ? `?${queryString}` : ''}`;
+  return await jsonFetch(path) as SessionsListResponse;
 }
 
 // Poll for changes every `intervalMs`. Returns a function to cancel
