@@ -183,10 +183,10 @@ export const ConnectFour: React.FC<ConnectFourProps> = ({ sessionId }) => {
 
   return (
     <div className="c4-container">
-      <PlayerInfo players={gameState.players as any} currentTurn={gameState.currentTurn} />
+      <PlayerInfo players={gameState.players as any} currentTurn={gameState.currentTurn as string} />
       <GameStatus 
-        currentTurn={gameState.currentTurn} 
-        winner={gameState.winner} 
+        currentTurn={gameState.currentTurn as string} 
+        winner={gameState.winner as string} 
         draw={gameState.draw} 
         players={gameState.players as any} 
       />

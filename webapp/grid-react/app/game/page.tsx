@@ -1,18 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSession as apiGetSession, type Session } from '../../../src/utils/api';
-import { TicTacToe } from '../../../src/components/tic-tac-toe';
-import { ConnectFour } from '../../../src/components/connect-four';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getSession as apiGetSession, type Session } from '../../src/utils/api';
+import { TicTacToe } from '../../src/components/tic-tac-toe';
+import { ConnectFour } from '../../src/components/connect-four';
 
-export default function GamePage({ params }: { params: { sessionId: string } }) {
-  const { sessionId } = params;
+function GameContent() {
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get('id');
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!sessionId) {
+      router.push('/');
+      return;
+    }
+
     const checkSession = async () => {
       try {
         const s = await apiGetSession(sessionId);
@@ -34,7 +40,7 @@ export default function GamePage({ params }: { params: { sessionId: string } }) 
   }, [sessionId, router]);
 
   if (loading) return <div>Loading...</div>;
-  if (!session) return null;
+  if (!session || !sessionId) return null;
 
   const gameType = session.gameType || 'tic_tac_toe';
 
@@ -49,3 +55,12 @@ export default function GamePage({ params }: { params: { sessionId: string } }) 
     </div>
   );
 }
+
+export default function GamePage() {
+  return (
+    <Suspense fallback={<div>Loading game...</div>}>
+      <GameContent />
+    </Suspense>
+  );
+}
+

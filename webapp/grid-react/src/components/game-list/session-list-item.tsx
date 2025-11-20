@@ -15,11 +15,11 @@ export const SessionListItem: FC<SessionListItemProps> = ({ session, currentUser
 
   const handleClick = () => {
     if (session.status === 'FINISHED') {
-      router.push(`/game/${session.id}`);
+      router.push(`/game?id=${session.id}`);
     } else if (session.status === 'ACTIVE') {
-      router.push(`/game/${session.id}`);
+      router.push(`/game?id=${session.id}`);
     } else {
-      router.push(`/waiting/${session.id}`);
+      router.push(`/waiting?id=${session.id}`);
     }
   };
 

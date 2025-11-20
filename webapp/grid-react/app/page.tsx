@@ -54,7 +54,7 @@ export default function Home() {
       });
       setIsModalOpen(false);
       showToast('Game created successfully!', 'success');
-      router.push(`/waiting/${session.id}`);
+      router.push(`/waiting?id=${session.id}`);
     } catch (error: any) {
       console.error('Error creating session:', error);
       showToast(error.message || 'Failed to create session', 'error');

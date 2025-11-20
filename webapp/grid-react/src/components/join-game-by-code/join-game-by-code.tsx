@@ -33,7 +33,7 @@ export const JoinGameByCode: FC<JoinGameByCodeProps> = ({ onError }) => {
       // Validate that the session exists
       await getSession(trimmedCode);
       // Navigate to join page
-      router.push(`/join/${trimmedCode}`);
+      router.push(`/join?id=${trimmedCode}`);
     } catch (error) {
       setIsValidating(false);
       const errorMessage = error instanceof Error ? error.message : 'Invalid game code. Please check and try again.';

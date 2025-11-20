@@ -1,18 +1,19 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
-import UserNameModal from '../../../src/components/user-name-modal/user-name-modal';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useState, Suspense } from 'react';
+import UserNameModal from '../../src/components/user-name-modal/user-name-modal';
 import {
   joinSession as apiJoinSession,
   getSession as apiGetSession,
   createUser as apiCreateUser,
-} from '../../../src/utils/api';
-import { useUser } from '../../../src/context/UserContext';
-import { useToast } from '../../../src/context/ToastContext';
+} from '../../src/utils/api';
+import { useUser } from '../../src/context/UserContext';
+import { useToast } from '../../src/context/ToastContext';
 
-export default function JoinPage({ params }: { params: { gameId: string } }) {
-  const { gameId } = params;
+function JoinContent() {
+  const searchParams = useSearchParams();
+  const gameId = searchParams.get('id');
   const router = useRouter();
   const { user, isLoading: isUserLoading, login } = useUser();
   const { showToast } = useToast();
@@ -25,6 +26,11 @@ export default function JoinPage({ params }: { params: { gameId: string } }) {
 
   // Check if session exists
   useEffect(() => {
+    if (!gameId) {
+      router.push('/');
+      return;
+    }
+
     let cancelled = false;
 
     const checkSession = async () => {
@@ -48,19 +54,19 @@ export default function JoinPage({ params }: { params: { gameId: string } }) {
     return () => {
       cancelled = true;
     };
-  }, [gameId]);
+  }, [gameId, router]);
 
   const attemptJoin = useCallback(async (id: string) => {
+    if (!gameId) return;
     setIsJoining(true);
     try {
       await apiJoinSession(gameId, id);
       setHasJoined(true);
       showToast('Joined game successfully!', 'success');
-      router.push(`/waiting/${gameId}`);
+      router.push(`/waiting?id=${gameId}`);
     } catch (error: any) {
       console.error('Failed to join session', error);
       showToast(error.message || 'Unable to join session. Please try again.', 'error');
-      // If join fails, maybe user is invalid or full, but we stay here.
     } finally {
       setIsJoining(false);
     }
@@ -68,14 +74,14 @@ export default function JoinPage({ params }: { params: { gameId: string } }) {
 
   // Auto-join if user exists and session is ready
   useEffect(() => {
-    if (isUserLoading || !sessionReady || isJoining || hasJoined) return;
+    if (isUserLoading || !sessionReady || isJoining || hasJoined || !gameId) return;
 
     if (user) {
       attemptJoin(user.id);
     } else {
       setShowNameModal(true);
     }
-  }, [isUserLoading, sessionReady, user, isJoining, hasJoined, attemptJoin]);
+  }, [isUserLoading, sessionReady, user, isJoining, hasJoined, attemptJoin, gameId]);
 
   const onSubmitName = async (name: string, icon?: string) => {
     setIsJoining(true);
@@ -83,10 +89,6 @@ export default function JoinPage({ params }: { params: { gameId: string } }) {
       const newUser = await apiCreateUser(name, icon);
       login(newUser.id, newUser.name, newUser.icon);
       setShowNameModal(false);
-      // attemptJoin will be triggered by useEffect when user updates, 
-      // BUT user update in context might take a tick. 
-      // Safest is to call join directly here or wait for effect.
-      // Let's call directly to be sure and show feedback immediately.
       await attemptJoin(newUser.id);
     } catch (error: any) {
       console.error('Failed to create user', error);
@@ -94,6 +96,8 @@ export default function JoinPage({ params }: { params: { gameId: string } }) {
       setIsJoining(false);
     }
   };
+
+  if (!gameId) return null;
 
   if (sessionError) {
     return (
@@ -123,3 +127,12 @@ export default function JoinPage({ params }: { params: { gameId: string } }) {
     </div>
   );
 }
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <JoinContent />
+    </Suspense>
+  );
+}
+

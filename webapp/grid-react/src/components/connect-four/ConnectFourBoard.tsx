@@ -23,7 +23,7 @@ export const ConnectFourBoard: React.FC<ConnectFourBoardProps> = ({
       if (typeof p === 'object' && p.id) {
         return p.id === playerId;
       }
-      return p === playerId;
+      return p.id === playerId;
     });
     
     if (player && typeof player === 'object' && player.icon) {
