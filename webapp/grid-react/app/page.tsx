@@ -23,6 +23,8 @@ export default function Home() {
   const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
+    const target = process.env.NEXT_PUBLIC_API_PROXY_TARGET;
+    console.log("***** target", target, process.env)
     if (!isUserLoading && !user) {
       setIsUserNameModalOpen(true);
     }

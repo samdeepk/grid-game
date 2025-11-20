@@ -1,23 +1,25 @@
 
 FROM node:20-alpine AS deps
-ARG NEXT_PUBLIC_API_BASE_URL
-
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN corepack enable && pnpm install --frozen-lockfile
 
 FROM node:20-alpine AS builder
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN corepack enable && pnpm build
 
 FROM node:20-alpine AS runner
+ARG NEXT_PUBLIC_API_BASE_URL
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=8080
 
-
+# Note: NEXT_PUBLIC_* vars are baked into the build at build time
+# This is only for runtime override if needed
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 RUN echo "******* Trigger NEXT_PUBLIC_API_BASE_URL $NEXT_PUBLIC_API_BASE_URL"
 

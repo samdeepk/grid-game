@@ -1,5 +1,6 @@
 """FastAPI application with database integration."""
 from contextlib import asynccontextmanager
+from textwrap import indent
 from typing import AsyncGenerator, Optional, List
 import uuid
 from pathlib import Path
@@ -16,6 +17,12 @@ from database import get_db, init_db
 from models import Game, Session, User, Move
 from game_logic import get_game_logic
 
+
+import os, json
+
+target = os.environ.get("DIRECT_URL")
+print("Proxy target:", target)
+print("Proxy target:", json.dupms(os.environ, indent=2))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
