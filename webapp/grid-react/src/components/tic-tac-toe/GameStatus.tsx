@@ -1,22 +1,22 @@
 import React from 'react';
-import { PlayerId } from './types';
+import { Player, PlayerId } from '../../types/game';
 
 interface GameStatusProps {
-  currentTurn: PlayerId;
+  currentTurn: PlayerId | null;
   winner: PlayerId | null;
-  draw: boolean;
-  players?: Array<PlayerId | { id: PlayerId; name?: string; icon?: string }>;
+  draw?: boolean;
+  players: Player[];
 }
 
 export const GameStatus: React.FC<GameStatusProps> = ({ currentTurn, winner, draw, players }) => {
-  let currentName: string | null = null;
-  if (players) {
-    const matched = players.find((p) => (typeof p === 'string' ? p === currentTurn : (p as any).id === currentTurn));
-    if (matched && typeof matched !== 'string' && typeof matched !== 'number') {
-      currentName = (matched as any).name ?? String((matched as any).id);
-    }
-  }
-  if (winner) return <div className="ttt-status">Winner: {winner}</div>;
+  const getPlayerName = (id: PlayerId | null) => {
+    if (!id) return '';
+    const p = players.find((player) => player.id === id);
+    return p ? p.name : id;
+  };
+
+  if (winner) return <div className="ttt-status">Winner: {getPlayerName(winner)}</div>;
   if (draw) return <div className="ttt-status">Draw!</div>;
-  return <div className="ttt-status">Current turn: {currentName ?? currentTurn}</div>;
+  
+  return <div className="ttt-status">Current turn: {getPlayerName(currentTurn)}</div>;
 };

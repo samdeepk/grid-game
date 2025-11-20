@@ -82,6 +82,8 @@ const CreateGameModal: FC<CreateGameModalProps> = ({ isOpen, onClose, onSubmit }
                     className={`icon-option ${selectedIcon === icon ? 'selected' : ''}`}
                     onClick={() => setSelectedIcon(icon)}
                     type="button"
+                    aria-label={`Select icon ${icon}`}
+                    aria-pressed={selectedIcon === icon}
                   >
                     {icon}
                   </button>
