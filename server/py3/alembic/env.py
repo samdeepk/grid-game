@@ -1,23 +1,19 @@
-"""Alembic migration script for Grid Game.
-
-Basic async-aware env that reads database URL from `.env` and uses the project's
-`Base.metadata` for target metadata (models).
-"""
-from __future__ import annotations
-
 import os
 from logging.config import fileConfig
 
+from sqlalchemy import engine_from_config, pool
+
 from alembic import context
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-import sqlalchemy as sa
+
+# Import models and database
 import sys
-import os as _os
-# Ensure the parent project directory (server/py3) is on the Python path so local imports (like `database`) resolve
-PROJECT_DIR = _os.path.dirname(_os.path.dirname(__file__))
-if PROJECT_DIR not in sys.path:
-    sys.path.insert(0, PROJECT_DIR)
+from pathlib import Path
+
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from database import Base
+from models import User, Game, Session, Move  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -25,36 +21,32 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
 
-# Load .env for local dev
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except Exception:
-    pass
+# Get database URL from environment
+from dotenv import load_dotenv
+load_dotenv()
 
-# Ensure env has DB url (DIRECT_URL preferred over DATABASE_URL)
-DB_URL = os.getenv('DIRECT_URL') or os.getenv('DATABASE_URL')
-if not DB_URL:
-    raise RuntimeError('DIRECT_URL or DATABASE_URL must be set for migrations')
+database_url = os.getenv("DATABASE_URL") or os.getenv("DIRECT_URL")
+if database_url:
+    # Convert asyncpg URL to standard PostgreSQL URL for Alembic (use psycopg2)
+    if database_url.startswith("postgresql+asyncpg://"):
+        database_url = database_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+    elif database_url.startswith("postgresql://"):
+        # Ensure we use psycopg2 for migrations
+        if "+" not in database_url:
+            database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    config.set_main_option("sqlalchemy.url", database_url)
 
-# Alembic doesn't accept asyncpg scheme; if +asyncpg is present, remove it
-if DB_URL.startswith('postgresql+asyncpg://'):
-    SA_DB_URL = DB_URL.replace('+asyncpg', '')
-else:
-    SA_DB_URL = DB_URL
-
-# Set sqlalchemy url for alembic
-config.set_main_option('sqlalchemy.url', SA_DB_URL)
-
-# Import project metadata
-# Avoid importing the module that enforces env vars at module-import time, so import models only
-from database import Base
-from models import *  # noqa: F401,F403
-
-# this is the MetaData object for 'autogenerate' support
+# add your model's MetaData object here
+# for 'autogenerate' support
 target_metadata = Base.metadata
+
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
 
 
 def run_migrations_offline() -> None:
@@ -64,8 +56,12 @@ def run_migrations_offline() -> None:
     and not an Engine, though an Engine is acceptable
     here as well.  By skipping the Engine creation
     we don't even need a DBAPI to be available.
+
+    Calls to context.execute() here emit the given string to the
+    script output.
+
     """
-    url = config.get_main_option('sqlalchemy.url')
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -82,8 +78,8 @@ def run_migrations_online() -> None:
 
     In this scenario we need to create an Engine
     and associate a connection with the context.
-    """
 
+    """
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -91,7 +87,9 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection, target_metadata=target_metadata
+        )
 
         with context.begin_transaction():
             context.run_migrations()
