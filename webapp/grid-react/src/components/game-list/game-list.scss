@@ -1,0 +1,70 @@
+.gamelist-wrapper {
+  width: 100%;
+}
+
+.gamelist-loading {
+  padding: 24px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.gamelist-error {
+  padding: 24px;
+  text-align: center;
+  color: #dc2626;
+
+  p {
+    margin: 0 0 12px 0;
+  }
+
+  button {
+    padding: 8px 16px;
+    background-color: #3b82f6;
+    color: white;
+    border: 1px solid #3b82f6;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: #2563eb;
+      border-color: #2563eb;
+    }
+  }
+}
+
+.gamelist-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.gamelist-empty-state {
+  padding: 48px 24px;
+  text-align: center;
+  color: #6b7280;
+
+  > div:first-child {
+    margin-bottom: 16px;
+    font-size: 1.125rem;
+  }
+
+  button {
+    padding: 10px 24px;
+    background-color: #3b82f6;
+    color: white;
+    border: 1px solid #3b82f6;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: #2563eb;
+      border-color: #2563eb;
+    }
+  }
+}
+

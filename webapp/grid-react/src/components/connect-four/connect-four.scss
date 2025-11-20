@@ -1,0 +1,121 @@
+.c4-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.c4-board-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.c4-column-headers {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.c4-column-header {
+  width: 50px;
+  height: 40px;
+  font-size: 1.5rem;
+  text-align: center;
+  background: #4a90e2;
+  color: white;
+  border: 2px solid #357abd;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.2s;
+  font-weight: bold;
+}
+
+.c4-column-header:hover:not(:disabled) {
+  background: #5aa0f2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.c4-column-header:disabled,
+.c4-column-header.full {
+  background: #999;
+  border-color: #777;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.c4-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: #1e3a8a;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 3px solid #1e40af;
+}
+
+.c4-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.c4-cell {
+  width: 50px;
+  height: 50px;
+  background: #f0f0f0;
+  border: 2px solid #ccc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.c4-cell.drop-position {
+  background: #e3f2fd;
+  border-color: #2196f3;
+}
+
+.c4-piece {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.c4-empty {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+// Reuse status and player styles from tic-tac-toe
+.c4-container .ttt-status {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.c4-container .ttt-players {
+  display: flex;
+  gap: 1rem;
+}
+
+.c4-container .ttt-player-active {
+  color: #1976d2;
+  font-weight: bold;
+}
+

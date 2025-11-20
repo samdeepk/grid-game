@@ -1,0 +1,137 @@
+
+.loading-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.5rem;
+  color: #9ca3c7;
+}
+
+.home-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 64px 32px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.home-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  font-size: 0.75rem;
+  color: #8c91af;
+  margin: 0 0 4px;
+}
+
+.home-title {
+  font-size: clamp(2.75rem, 4vw, 3.5rem);
+  margin: 0;
+  color: #ffffff;
+}
+
+.home-subtitle {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #c7cbe9;
+}
+
+.home-grid {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+.home-actions {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.card {
+  background: rgba(17, 20, 32, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+}
+
+.card-header h2,
+.card-header h3 {
+  margin: 0;
+  color: #ffffff;
+}
+
+.card-header p {
+  margin: 6px 0 0;
+  color: #9ca3c7;
+  font-size: 0.95rem;
+}
+
+.button-primary {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(99, 102, 241, 0.35);
+}
+
+.button-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.home-games-card {
+  flex: 1.2;
+  min-width: 0;
+}
+
+.error-message {
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #fecaca;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 1024px) {
+  .home-container {
+    padding: 48px 20px 72px;
+  }
+
+  .home-grid {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .home-container {
+    padding: 32px 16px 48px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+}

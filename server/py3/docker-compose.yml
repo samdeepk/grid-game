@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: grid-game-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gridgame
+      POSTGRES_PASSWORD: gridgame123
+      POSTGRES_DB: gridgame
+    ports:
+      - "5432:5432"
+    volumes:
+      - gridgame_pgdata:/var/lib/postgresql/data
+
+volumes:
+  gridgame_pgdata:
+    driver: local
+
