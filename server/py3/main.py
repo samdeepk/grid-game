@@ -2,8 +2,11 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional, List
 import uuid
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi.staticfiles import StaticFiles
+
 from pydantic import BaseModel
 from sqlalchemy import select, func as sql_func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,10 +49,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get('/')
-async def read_root():
-    """Root endpoint."""
-    return {'Hello': 'World', 'database': 'connected'}
+@app.get('/healthz')
+async def healthz():
+    """Health probe endpoint."""
+    return {'status': 'ok'}
 
 
 class CreateUserRequest(BaseModel):
@@ -140,6 +143,8 @@ def serialize_session_list_item(session: Session) -> dict:
         'players': players,
         'createdAt': session.created_at.isoformat() if session.created_at else None,
     }
+
+
 
 
 @app.post('/users', status_code=status.HTTP_201_CREATED)
@@ -526,3 +531,10 @@ async def make_move(
 async def leaderboard():
     """Get leaderboard."""
     pass
+
+
+STATIC_DIR = Path(__file__).parent / 'static'
+if STATIC_DIR.exists():
+    app.mount('/', StaticFiles(directory=str(STATIC_DIR), html=True), name='frontend')
+else:
+    print('ℹ️  Frontend static bundle not found; skipping mount.')

@@ -1,5 +1,16 @@
 # syntax=docker/dockerfile:1
 
+FROM node:20-bullseye AS frontend-builder
+WORKDIR /frontend
+
+RUN corepack enable
+
+COPY webapp/grid-react/package.json ./
+COPY webapp/grid-react/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY webapp/grid-react ./
+RUN pnpm run build:static
+
 FROM python:3.11-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -17,12 +28,13 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY requirements.txt /tmp/requirements.txt
+COPY server/py3/requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r /tmp/requirements.txt \
     && rm -f /tmp/requirements.txt
 
-COPY . /app
+COPY server/py3 /app
+COPY --from=frontend-builder /frontend/out /app/static
 RUN chmod +x /app/entrypoint.sh
 
 ENV PYTHONPATH=/app

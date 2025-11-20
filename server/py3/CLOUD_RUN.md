@@ -20,10 +20,11 @@ gcloud config set project <PROJECT_ID>
 
 ## 2. Build & Push the Image
 
-From the repository root (the backend directory is used as the build context):
+From the repository root (the Dockerfile lives at `server/py3/Dockerfile`, but we need the whole repo so the React frontend can be bundled in the image):
 
 ```bash
-gcloud builds submit server/py3 \
+gcloud builds submit . \
+  --file server/py3/Dockerfile \
   --tag us-central1-docker.pkg.dev/<PROJECT_ID>/grid-game/grid-game-backend:$(git rev-parse --short HEAD)
 ```
 
@@ -58,7 +59,7 @@ Once deployed, verify:
 
 ```bash
 SERVICE_URL=$(gcloud run services describe grid-game-backend --region=us-central1 --format='value(status.url)')
-curl "$SERVICE_URL/"
+curl "$SERVICE_URL/healthz"
 ```
 
 You should receive the JSON response defined in `main.py`.
@@ -74,8 +75,7 @@ You should receive the JSON response defined in `main.py`.
 Before pushing, test locally:
 
 ```bash
-cd server/py3
-docker build -t grid-game-backend .
+docker build -f server/py3/Dockerfile -t grid-game-backend .
 docker run --rm -p 8080:8080 \
   -e DIRECT_URL=postgresql+asyncpg://... \
   grid-game-backend
@@ -83,13 +83,15 @@ docker run --rm -p 8080:8080 \
 
 Visit `http://localhost:8080` to ensure the API boots with the Dockerized environment.
 
+> The Docker build now includes a Node-based stage that runs `pnpm run build:static` inside `webapp/grid-react`, then copies the generated files into `server/py3/static`. FastAPI serves these assets directly (see `main.py`), so Cloud Run hosts both the API and the React UI from a single container.
+
 ## 7. GitHub Actions (CI/CD)
 
 A workflow at `.github/workflows/backend-cloud-run.yml` automates container builds and deployments:
 
 1. Triggers on pushes to `main` that touch backend/Docker assets, or via manual `workflow_dispatch`.
 2. Authenticates to Google Cloud using the `GCP_SA_KEY` JSON secret (workload identity can replace this later).
-3. Runs `gcloud builds submit` with `server/py3/Dockerfile`, tagging the image as `REGION-docker.pkg.dev/PROJECT/REPOSITORY/grid-game-backend:<commit-sha>`.
+3. Runs `gcloud builds submit . --file server/py3/Dockerfile`, tagging the image as `REGION-docker.pkg.dev/PROJECT/REPOSITORY/grid-game-backend:<commit-sha>`.
 4. Deploys the freshly built image to Cloud Run with `gcloud run deploy`, wiring the `DIRECT_URL` env var from repo secrets.
 
 ### Required GitHub Secrets
