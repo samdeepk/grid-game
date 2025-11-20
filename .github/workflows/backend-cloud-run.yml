@@ -46,11 +46,9 @@ jobs:
         run: |
           IMAGE_PATH="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${COMMIT_SHA}"
           echo "IMAGE_PATH=${IMAGE_PATH}" >> "$GITHUB_ENV"
-          gcloud builds submit \
+          gcloud builds submit server/py3 \
             --tag "${IMAGE_PATH}" \
-            --project "${PROJECT_ID}" \
-            --file server/py3/Dockerfile \
-            .
+            --project "${PROJECT_ID}"
 
       - name: "Deploy to Cloud Run"
         env:
