@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db, init_db
-from models import Game, Session, User, Move
+from models import Session, User, Move
 from game_logic import get_game_logic
 
 
@@ -171,9 +171,7 @@ async def create_user(payload: CreateUserRequest, db: AsyncSession = Depends(get
 @app.post('/sessions', status_code=status.HTTP_201_CREATED)
 async def create_session(payload: CreateSessionRequest, db: AsyncSession = Depends(get_db)):
     """Create a new session for the given host."""
-    print("payload.hostId ====> ", payload.hostId)
     result = await db.execute(select(User).where(User.id == payload.hostId))
-    print("payload.hostId ====> ", result)
     host = result.scalar_one_or_none()
     if not host:
         raise HTTPException(
@@ -209,63 +207,6 @@ async def create_session(payload: CreateSessionRequest, db: AsyncSession = Depen
 
     await db.refresh(session)
     return serialize_session(session)
-
-
-@app.get('/start-game')
-async def start_game(
-    user_id: str,
-    name: str,
-    icon: str = None,
-    db: AsyncSession = Depends(get_db),
-):
-    """Start a new game."""
-    # Ensure the user exists before creating a game
-    result = await db.execute(select(User.id).where(User.id == user_id))
-    existing_user = result.scalar_one_or_none()
-    if existing_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f'User with id {user_id} not found',
-        )
-
-    game = Game(id=str(uuid.uuid4()), user_id=user_id, name=name, icon=icon, status='active')
-    db.add(game)
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        raise
-
-    await db.refresh(game)
-    return {'id': game.id, 'name': game.name, 'status': game.status}
-
-
-@app.get('/join-game')
-async def join_game():
-    """Join an existing game."""
-    pass
-
-
-@app.get('/make-move')
-async def make_move():
-    """Make a move in a game."""
-    pass
-
-
-@app.get('/game-list')
-async def game_list(user_id: Optional[str] = None, db: AsyncSession = Depends(get_db)):
-    """Get list of games."""
-    if user_id:
-        stmt = select(Game).where(Game.user_id == user_id)
-    else:
-        stmt = select(Game)
-
-    result = await db.execute(stmt)
-    games = result.scalars().all()
-    return [
-        {'id': game.id, 'name': game.name, 'icon': game.icon, 'status': game.status}
-        for game in games
-    ]
 
 
 @app.get('/sessions/{session_id}')
@@ -528,9 +469,82 @@ async def make_move(
 
 
 @app.get('/leaderboard')
-async def leaderboard():
-    """Get leaderboard."""
-    pass
+async def leaderboard(
+    metric: str = Query('win_count', description='Sort by: win_count or efficiency'),
+    limit: int = Query(3, ge=1, le=100, description='Number of top players to return (1-100)'),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get leaderboard of top players by win count or efficiency."""
+    if metric not in ['win_count', 'efficiency']:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Invalid metric: {metric}. Must be win_count or efficiency'
+        )
+    
+    # Query finished sessions with winners
+    finished_sessions_stmt = select(Session).where(
+        Session.status == 'FINISHED',
+        Session.winner.isnot(None)
+    )
+    finished_sessions_result = await db.execute(finished_sessions_stmt)
+    finished_sessions = finished_sessions_result.scalars().all()
+    
+    # Calculate stats per player
+    player_stats = {}  # {player_id: {'wins': count, 'total_moves': count, 'name': str}}
+    
+    for session in finished_sessions:
+        winner_id = session.winner
+        
+        # Get player name from session
+        if winner_id == session.host_id:
+            player_name = session.host_name
+        elif winner_id == session.guest_id:
+            player_name = session.guest_name
+        else:
+            # Fallback: query User table
+            user_result = await db.execute(select(User).where(User.id == winner_id))
+            user = user_result.scalar_one_or_none()
+            player_name = user.name if user else winner_id
+        
+        # Count moves in this winning game
+        moves_result = await db.execute(
+            select(sql_func.count(Move.id)).where(Move.session_id == session.id)
+        )
+        move_count = moves_result.scalar_one() or 0
+        
+        if winner_id not in player_stats:
+            player_stats[winner_id] = {
+                'wins': 0,
+                'total_moves': 0,
+                'name': player_name
+            }
+        
+        player_stats[winner_id]['wins'] += 1
+        player_stats[winner_id]['total_moves'] += move_count
+    
+    # Convert to list and calculate efficiency
+    leaderboard_data = []
+    for player_id, stats in player_stats.items():
+        efficiency = None
+        if stats['wins'] > 0:
+            efficiency = stats['total_moves'] / stats['wins']
+        
+        leaderboard_data.append({
+            'playerId': player_id,
+            'name': stats['name'],
+            'wins': stats['wins'],
+            'efficiency': round(efficiency, 2) if efficiency is not None else None
+        })
+    
+    # Sort by metric
+    if metric == 'win_count':
+        leaderboard_data.sort(key=lambda x: x['wins'], reverse=True)
+    else:  # efficiency
+        # Sort by efficiency (lower is better), then by wins as tiebreaker
+        leaderboard_data.sort(key=lambda x: (x['efficiency'] if x['efficiency'] is not None else float('inf'), -x['wins']))
+    
+    # Return top N
+    return leaderboard_data[:limit]
 
 
 STATIC_DIR = Path(__file__).parent / 'static'
