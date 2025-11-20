@@ -1,6 +1,7 @@
 // Simple REST client to interact with the backend API for game sessions
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api').replace(/\/$/, '');
+const rawBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+const API_BASE = rawBase.replace(/\/$/, '');
 
 async function jsonFetch(path: string, opts: RequestInit = {}) {
   const res = await fetch(`${API_BASE}${path}`, opts);

@@ -16,7 +16,7 @@ export const GameStatus: React.FC<GameStatusProps> = ({ currentTurn, winner, dra
   };
 
   if (winner) return <div className="ttt-status winner">Winner: {getPlayerName(winner)}! 🎉</div>;
-  if (draw) return <div className="ttt-status draw">It's a Draw! 🤝</div>;
+  if (draw) return <div className="ttt-status draw">It&apos;s a Draw! 🤝</div>;
   
   return <div className="ttt-status">Current turn: {getPlayerName(currentTurn)}</div>;
 };

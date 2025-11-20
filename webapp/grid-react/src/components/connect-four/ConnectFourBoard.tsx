@@ -1,11 +1,12 @@
 import React from 'react';
 import { CellValue } from './types';
+import { Player } from '../../types/game';
 
 interface ConnectFourBoardProps {
   board: CellValue[][];
   onColumnClick: (col: number) => void;
   disabled?: boolean;
-  players?: Array<{ id: string | number; name?: string; icon?: string }>;
+  players?: Player[];
 }
 
 export const ConnectFourBoard: React.FC<ConnectFourBoardProps> = ({ 
@@ -19,12 +20,7 @@ export const ConnectFourBoard: React.FC<ConnectFourBoardProps> = ({
     if (!playerId) return '';
     if (!players) return String(playerId);
     
-    const player = players.find((p) => {
-      if (typeof p === 'object' && p.id) {
-        return p.id === playerId;
-      }
-      return p === playerId;
-    });
+    const player = players.find((p) => p.id === playerId);
     
     if (player && typeof player === 'object' && player.icon) {
       return player.icon;

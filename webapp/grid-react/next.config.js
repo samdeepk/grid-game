@@ -6,6 +6,10 @@ const API_PROXY_TARGET =
 
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
+  images: {
+    unoptimized: true,
+  },
   async rewrites() {
     return [
       {
