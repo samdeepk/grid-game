@@ -21,10 +21,6 @@ ENV NODE_ENV=production \
 # Note: NEXT_PUBLIC_* vars are baked into the build at build time
 # This is only for runtime override if needed
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
-RUN echo "******* Trigger NEXT_PUBLIC_API_BASE_URL $NEXT_PUBLIC_API_BASE_URL"
-
-RUN echo "NEXT_PUBLIC_API_BASE_URL:${NEXT_PUBLIC_API_BASE_URL}" > .env
-
 
 # Create non-root user
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
@@ -34,8 +30,14 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+# Copy entrypoint script and make it executable
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh && \
+    chown -R nextjs:nodejs /app
+
 USER nextjs
 EXPOSE 8080
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["node", "server.js", "--hostname", "0.0.0.0", "--port", "8080"]
 
