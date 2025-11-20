@@ -7,5 +7,5 @@ Monorepo containing the FastAPI backend (`server/py3`) and the React frontend (`
 The backend can be containerized and deployed to Google Cloud Run manually or via GitHub Actions. See `server/py3/CLOUD_RUN.md` for:
 
 - Dockerfile details and local testing instructions
-- `gcloud` build/push/deploy flow
+- `gcloud` build/push/deploy flow (`gcloud builds submit server/py3 ...`)
 - CI/CD workflow description (`.github/workflows/backend-cloud-run.yml`) and required secrets (workflow injects the `DIRECT_URL` secret used by `server/py3/entrypoint.sh` to hydrate `/app/.env`)

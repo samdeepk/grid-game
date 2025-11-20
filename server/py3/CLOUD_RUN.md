@@ -20,10 +20,10 @@ gcloud config set project <PROJECT_ID>
 
 ## 2. Build & Push the Image
 
-From the repository root:
+From the repository root (the backend directory is used as the build context):
 
 ```bash
-gcloud builds submit \
+gcloud builds submit server/py3 \
   --tag us-central1-docker.pkg.dev/<PROJECT_ID>/grid-game/grid-game-backend:$(git rev-parse --short HEAD)
 ```
 
@@ -74,7 +74,8 @@ You should receive the JSON response defined in `main.py`.
 Before pushing, test locally:
 
 ```bash
-docker build -t grid-game-backend -f server/py3/Dockerfile .
+cd server/py3
+docker build -t grid-game-backend .
 docker run --rm -p 8080:8080 \
   -e DIRECT_URL=postgresql+asyncpg://... \
   grid-game-backend

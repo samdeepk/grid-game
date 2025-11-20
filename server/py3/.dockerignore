@@ -1,0 +1,36 @@
+.git
+.gitignore
+
+# Python caches/environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Local tooling / editor settings
+.DS_Store
+.idea/
+.vscode/
+
+# Env files & secrets
+.env
+.env.*
+*.env
+
+# Build/test artifacts
+dist/
+build/
+.coverage
+htmlcov/
+
+# Node modules (if copied accidentally)
+node_modules/
+
+# Misc
+*.log
+
