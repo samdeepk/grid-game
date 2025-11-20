@@ -1,11 +1,12 @@
 import React from 'react';
 import { CellValue } from './types';
+import { getPlayerColor } from '../../utils/colors';
 
 interface GameBoardProps {
   board: CellValue[][];
   onCellClick: (row: number, col: number) => void;
   disabled?: boolean;
-  players?: Array<{ id: string | number; name?: string; icon?: string }>;
+  players?: Array<{ id: string | number; name?: string; icon?: string } | string | number>;
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ board, onCellClick, disabled, players }) => {
@@ -14,19 +15,49 @@ export const GameBoard: React.FC<GameBoardProps> = ({ board, onCellClick, disabl
     if (!playerId) return '';
     if (!players) return String(playerId);
     
-    const player = players.find((p) => {
-      if (typeof p === 'object' && p.id) {
+    const playerIndex = players.findIndex((p) => {
+      if (typeof p === 'object' && p !== null && 'id' in p) {
         return p.id === playerId;
       }
       return p === playerId;
     });
+
+    if (playerIndex === -1) return String(playerId);
+
+    const player = players[playerIndex];
     
-    if (player && typeof player === 'object' && player.icon) {
+    if (typeof player === 'object' && player !== null && 'icon' in player && player.icon) {
       return player.icon;
     }
-    // Fallback to a default icon if no icon found
-    return '⚫';
+
+    // Default modern icons based on index
+    if (playerIndex === 0) return '✕';
+    if (playerIndex === 1) return '◯';
+    
+    return ['△', '□', '◇'][playerIndex - 2] || String(playerId).substring(0, 1);
   };
+
+  // Helper to get color style for player
+  const getPlayerStyle = (playerId: CellValue) => {
+    if (!playerId || !players) return {};
+    
+    const player = players.find((p) => {
+      if (typeof p === 'object' && p !== null && 'id' in p) {
+        return p.id === playerId;
+      }
+      return p === playerId;
+    });
+
+    if (!player) return {};
+
+    const id = typeof player === 'object' && 'id' in player ? String(player.id) : String(player);
+    const name = typeof player === 'object' && 'name' in player ? player.name || id : id;
+    
+    const color = getPlayerColor(name);
+    
+    return { color, backgroundColor: color };
+  };
+
 
   return (
     <div className="ttt-board">
@@ -38,6 +69,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ board, onCellClick, disabl
               key={colIdx}
               onClick={() => onCellClick(rowIdx, colIdx)}
               disabled={!!cell || disabled}
+              style={getPlayerStyle(cell)}
+              aria-label={`Cell ${rowIdx},${colIdx} ${cell ? 'occupied' : 'empty'}`}
             >
               {getPlayerIcon(cell)}
             </button>

@@ -24,6 +24,7 @@ export interface GameSession {
   winner?: PlayerId | null;
   draw?: boolean;
   createdAt?: string;
+  gameIcon?: string | null;
 }
 
 export interface GameState {
@@ -34,4 +35,3 @@ export interface GameState {
   draw: boolean;
   status: 'WAITING' | 'ACTIVE' | 'FINISHED';
 }
-
