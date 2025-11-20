@@ -22,7 +22,7 @@ import os, json
 
 target = os.environ.get("DIRECT_URL")
 print("Proxy target:", target)
-print("Proxy target:", json.dupms(os.environ, indent=2))
+print("Proxy target:", json.dumps(dict(os.environ), indent=2))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
