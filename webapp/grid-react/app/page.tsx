@@ -99,43 +99,56 @@ export default function Home() {
   }
 
   return (
-    <>
-      <h1>Grid Game</h1>
-      {user && <p>Welcome back, {user.name}!</p>}
-      
-      <div className="home-actions">
-        <div className="card">
-          <h3>Join Game by Code</h3>
-          {joinError && (
-            <div className="error-message">
-              {joinError}
+    <div className="home-container">
+      <header className="home-header">
+        <div>
+          <p className="eyebrow">Welcome to</p>
+          <h1 className="home-title">Grid Game</h1>
+        </div>
+        {user && <p className="home-subtitle">Welcome back, {user.name}!</p>}
+      </header>
+
+      <div className="home-grid">
+        <section className="home-actions">
+          <div className="card">
+            <div className="card-header">
+              <h3>Join Game by Code</h3>
+              <p>Jump into an existing match instantly</p>
             </div>
-          )}
-          <JoinGameByCode
-            onError={(message) => {
-              setJoinError(message);
-              setTimeout(() => setJoinError(null), 5000);
-            }}
+            {joinError && (
+              <div className="error-message">
+                {joinError}
+              </div>
+            )}
+            <JoinGameByCode
+              onError={(message) => {
+                setJoinError(message);
+                setTimeout(() => setJoinError(null), 5000);
+              }}
+            />
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <h3>Create New Game</h3>
+              <p>Start a fresh session and invite a friend</p>
+            </div>
+            <button onClick={createGame} className="button-primary">
+              Create New Game
+            </button>
+          </div>
+        </section>
+
+        <section className="card home-games-card">
+          <div className="card-header">
+            <h2>Your Games</h2>
+            <p>Games you watched, started or played</p>
+          </div>
+          <Gamelist
+            onOpenCreateGameModal={createGame}
+            onOpenUserNameModal={() => setIsUserNameModalOpen(true)}
           />
-        </div>
-
-        <div className="card">
-          <h3>Create New Game</h3>
-          <button onClick={createGame} className="button-primary" style={{ width: '100%', marginTop: '8px' }}>
-            Create New Game
-          </button>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Your Games</h2>
-        <p style={{ color: '#6b7280', marginBottom: '16px', fontSize: '0.875rem' }}>
-          Games you watched, started or played
-        </p>
-        <Gamelist
-          onOpenCreateGameModal={createGame}
-          onOpenUserNameModal={() => setIsUserNameModalOpen(true)}
-        />
+        </section>
       </div>
 
       <CreateGameModal
@@ -156,6 +169,6 @@ export default function Home() {
           }}
         />
       )}
-    </>
+    </div>
   );
 }
