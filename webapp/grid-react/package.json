@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:static": "next build && mv  ./out/** ../../server/py3/static",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
