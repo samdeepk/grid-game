@@ -582,3 +582,421 @@ class TestEndToEndFlow:
         assert data["board"][0][0] == test_user.id
         assert len(data["moves"]) == 1
 
+
+class TestConnectFourEndpoints:
+    """Test Connect 4 game-specific endpoints."""
+    
+    @pytest.mark.asyncio
+    async def test_create_connect_four_session(self, client: AsyncClient, test_user):
+        """Test creating a Connect 4 session."""
+        response = await client.post(
+            "/sessions",
+            json={
+                "hostId": test_user.id,
+                "hostName": test_user.name,
+                "gameIcon": "🔴",
+                "gameType": "connect_four"
+            }
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["gameType"] == "connect_four"
+        # Board should be 6x7
+        assert len(data["board"]) == 6
+        assert len(data["board"][0]) == 7
+        # All cells should be empty
+        assert all(cell is None for row in data["board"] for cell in row)
+    
+    @pytest.mark.asyncio
+    async def test_connect_four_column_drop(self, client: AsyncClient, test_user, test_user2, db_session):
+        """Test dropping a piece in a Connect 4 column."""
+        # Create Connect 4 session
+        create_response = await client.post(
+            "/sessions",
+            json={
+                "hostId": test_user.id,
+                "hostName": test_user.name,
+                "gameIcon": "🔴",
+                "gameType": "connect_four"
+            }
+        )
+        session_id = create_response.json()["id"]
+        
+        # Join session
+        await client.post(
+            f"/sessions/{session_id}/join",
+            json={"playerId": test_user2.id}
+        )
+        
+        # Drop piece in column 0 (should land at row 5, the bottom)
+        response = await client.post(
+            f"/sessions/{session_id}/move",
+            json={
+                "playerId": test_user.id,
+                "row": 5,  # Bottom row
+                "col": 0   # First column
+            }
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["board"][5][0] == test_user.id
+        assert data["board"][4][0] is None  # Row above should be empty
+        assert len(data["moves"]) == 1
+    
+    @pytest.mark.asyncio
+    async def test_connect_four_multiple_drops_same_column(self, client: AsyncClient, test_user, test_user2, db_session):
+        """Test dropping multiple pieces in the same column (stacking)."""
+        # Create and join Connect 4 session
+        create_response = await client.post(
+            "/sessions",
+            json={
+                "hostId": test_user.id,
+                "hostName": test_user.name,
+                "gameIcon": "🔴",
+                "gameType": "connect_four"
+            }
+        )
+        session_id = create_response.json()["id"]
+        
+        await client.post(
+            f"/sessions/{session_id}/join",
+            json={"playerId": test_user2.id}
+        )
+        
+        # Host drops in column 0 (row 5)
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 5, "col": 0}
+        )
+        
+        # Guest drops in column 0 (row 4, stacks on top)
+        response = await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 4, "col": 0}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["board"][5][0] == test_user.id  # Bottom piece
+        assert data["board"][4][0] == test_user2.id  # Top piece
+        assert data["board"][3][0] is None  # Above should be empty
+    
+    @pytest.mark.asyncio
+    async def test_connect_four_invalid_drop_row(self, client: AsyncClient, test_user, test_user2, db_session):
+        """Test dropping a piece at wrong row (not the lowest empty row)."""
+        # Create and join Connect 4 session
+        create_response = await client.post(
+            "/sessions",
+            json={
+                "hostId": test_user.id,
+                "hostName": test_user.name,
+                "gameIcon": "🔴",
+                "gameType": "connect_four"
+            }
+        )
+        session_id = create_response.json()["id"]
+        
+        await client.post(
+            f"/sessions/{session_id}/join",
+            json={"playerId": test_user2.id}
+        )
+        
+        # Try to drop at row 3 when it should be row 5 (should fail)
+        response = await client.post(
+            f"/sessions/{session_id}/move",
+            json={
+                "playerId": test_user.id,
+                "row": 3,  # Wrong row - should be 5
+                "col": 0
+            }
+        )
+        assert response.status_code == 400
+        assert "drop" in response.json()["detail"].lower() or "row" in response.json()["detail"].lower()
+    
+    @pytest.mark.asyncio
+    async def test_connect_four_full_column(self, client: AsyncClient, test_user, test_user2, db_session):
+        """Test that dropping in a full column fails."""
+        # Create and join Connect 4 session
+        create_response = await client.post(
+            "/sessions",
+            json={
+                "hostId": test_user.id,
+                "hostName": test_user.name,
+                "gameIcon": "🔴",
+                "gameType": "connect_four"
+            }
+        )
+        session_id = create_response.json()["id"]
+        
+        await client.post(
+            f"/sessions/{session_id}/join",
+            json={"playerId": test_user2.id}
+        )
+        
+        # Fill column 0 (6 pieces)
+        for i in range(6):
+            player = test_user.id if i % 2 == 0 else test_user2.id
+            row = 5 - i  # Start from bottom
+            await client.post(
+                f"/sessions/{session_id}/move",
+                json={"playerId": player, "row": row, "col": 0}
+            )
+        
+        # Try to drop in full column (should fail)
+        response = await client.post(
+            f"/sessions/{session_id}/move",
+            json={
+                "playerId": test_user.id,
+                "row": 0,  # Top row
+                "col": 0   # Full column
+            }
+        )
+        assert response.status_code == 400
+        assert "full" in response.json()["detail"].lower()
+    
+    @pytest.mark.asyncio
+    async def test_connect_four_win_horizontal(self, client: AsyncClient, test_user, test_user2, db_session):
+        """Test winning Connect 4 with 4 in a row horizontally."""
+        # Create and join Connect 4 session
+        create_response = await client.post(
+            "/sessions",
+            json={
+                "hostId": test_user.id,
+                "hostName": test_user.name,
+                "gameIcon": "🔴",
+                "gameType": "connect_four"
+            }
+        )
+        session_id = create_response.json()["id"]
+        
+        await client.post(
+            f"/sessions/{session_id}/join",
+            json={"playerId": test_user2.id}
+        )
+        
+        # Host wins horizontally: columns 0, 1, 2, 3 in row 5
+        # Host: col 0
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 5, "col": 0}
+        )
+        # Guest: col 4 (different column)
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 5, "col": 4}
+        )
+        # Host: col 1
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 5, "col": 1}
+        )
+        # Guest: col 5
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 5, "col": 5}
+        )
+        # Host: col 2
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 5, "col": 2}
+        )
+        # Guest: col 6
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 5, "col": 6}
+        )
+        # Host: col 3 - wins!
+        response = await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 5, "col": 3}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "FINISHED"
+        assert data["winner"] == test_user.id
+        assert data["currentTurn"] is None
+    
+    @pytest.mark.asyncio
+    async def test_connect_four_win_vertical(self, client: AsyncClient, test_user, test_user2, db_session):
+        """Test winning Connect 4 with 4 in a row vertically."""
+        # Create and join Connect 4 session
+        create_response = await client.post(
+            "/sessions",
+            json={
+                "hostId": test_user.id,
+                "hostName": test_user.name,
+                "gameIcon": "🔴",
+                "gameType": "connect_four"
+            }
+        )
+        session_id = create_response.json()["id"]
+        
+        await client.post(
+            f"/sessions/{session_id}/join",
+            json={"playerId": test_user2.id}
+        )
+        
+        # Host wins vertically: column 0, rows 5, 4, 3, 2
+        # Host: col 0, row 5
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 5, "col": 0}
+        )
+        # Guest: col 1, row 5
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 5, "col": 1}
+        )
+        # Host: col 0, row 4
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 4, "col": 0}
+        )
+        # Guest: col 1, row 4
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 4, "col": 1}
+        )
+        # Host: col 0, row 3
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 3, "col": 0}
+        )
+        # Guest: col 1, row 3
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 3, "col": 1}
+        )
+        # Host: col 0, row 2 - wins!
+        response = await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 2, "col": 0}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "FINISHED"
+        assert data["winner"] == test_user.id
+    
+    @pytest.mark.asyncio
+    async def test_connect_four_win_diagonal(self, client: AsyncClient, test_user, test_user2, db_session):
+        """Test winning Connect 4 with 4 in a row diagonally."""
+        # Create and join Connect 4 session
+        create_response = await client.post(
+            "/sessions",
+            json={
+                "hostId": test_user.id,
+                "hostName": test_user.name,
+                "gameIcon": "🔴",
+                "gameType": "connect_four"
+            }
+        )
+        session_id = create_response.json()["id"]
+        
+        await client.post(
+            f"/sessions/{session_id}/join",
+            json={"playerId": test_user2.id}
+        )
+        
+        # Host wins diagonally (down-right): (5,0), (4,1), (3,2), (2,3)
+        # Setup: Guest blocks in different columns
+        # Host: col 0, row 5
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 5, "col": 0}
+        )
+        # Guest: col 1, row 5 (blocks but doesn't matter)
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 5, "col": 1}
+        )
+        # Host: col 1, row 4
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 4, "col": 1}
+        )
+        # Guest: col 2, row 5
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 5, "col": 2}
+        )
+        # Host: col 2, row 4
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 4, "col": 2}
+        )
+        # Guest: col 3, row 5
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 5, "col": 3}
+        )
+        # Host: col 2, row 3
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 3, "col": 2}
+        )
+        # Guest: col 4, row 5
+        await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user2.id, "row": 5, "col": 4}
+        )
+        # Host: col 3, row 2 - wins diagonally!
+        response = await client.post(
+            f"/sessions/{session_id}/move",
+            json={"playerId": test_user.id, "row": 2, "col": 3}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "FINISHED"
+        assert data["winner"] == test_user.id
+    
+    @pytest.mark.asyncio
+    async def test_connect_four_draw(self, client: AsyncClient, test_user, test_user2, db_session):
+        """Test Connect 4 draw condition (full board, no winner)."""
+        # Create and join Connect 4 session
+        create_response = await client.post(
+            "/sessions",
+            json={
+                "hostId": test_user.id,
+                "hostName": test_user.name,
+                "gameIcon": "🔴",
+                "gameType": "connect_four"
+            }
+        )
+        session_id = create_response.json()["id"]
+        
+        await client.post(
+            f"/sessions/{session_id}/join",
+            json={"playerId": test_user2.id}
+        )
+        
+        # Fill the board in a pattern that doesn't create a winner
+        # Alternate columns to prevent any 4-in-a-row
+        # This is a simplified pattern - fill columns 0, 2, 4, 6 first, then 1, 3, 5
+        # Pattern: Host fills even columns, Guest fills odd columns
+        moves = []
+        for col in [0, 2, 4, 6, 1, 3, 5]:  # Even columns first, then odd
+            for row in range(5, -1, -1):  # Bottom to top
+                player = test_user.id if col % 2 == 0 else test_user2.id
+                moves.append((player, row, col))
+        
+        # Make all moves
+        response = None
+        for player_id, row, col in moves:
+            response = await client.post(
+                f"/sessions/{session_id}/move",
+                json={"playerId": player_id, "row": row, "col": col}
+            )
+            if response.status_code != 200:
+                break
+        
+        # Last move should result in draw
+        assert response is not None
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "FINISHED"
+        assert data["draw"] is True
+        assert data["winner"] is None
+

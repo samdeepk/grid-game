@@ -1,0 +1,2 @@
+export { ConnectFour } from './ConnectFour';
+

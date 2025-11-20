@@ -52,7 +52,7 @@ export default function Home() {
     }
   };
 
-  const handleGameSubmit = async (icon: string) => {
+  const handleGameSubmit = async (icon: string, gameType: string) => {
     if (!userId) {
       setPendingGameCreation(true);
       setIsUserNameModalOpen(true);
@@ -65,6 +65,7 @@ export default function Home() {
         hostId: userId,
         hostName: userName || undefined,
         gameIcon: icon,
+        gameType: gameType,
       });
       console.log('Created session', session);
       setIsModalOpen(false);

@@ -195,3 +195,46 @@
   }
 }
 
+.game-type-selector {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.game-type-option {
+  flex: 1;
+  padding: 16px;
+  border: 2px solid #d1d5db;
+  background-color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  &:hover {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  &.selected {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+.game-type-icon {
+  font-size: 2rem;
+}
+
+.game-type-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+

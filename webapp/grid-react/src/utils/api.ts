@@ -22,6 +22,7 @@ export type Session = {
   moves: { playerId: string; row: number; col: number }[];
   winner?: string | null;
   draw?: boolean;
+  gameType?: string;
 };
 
 export type SessionListItem = {
@@ -51,6 +52,7 @@ type CreateSessionPayload = {
   hostName?: string;
   hostIcon?: string | null;
   gameIcon?: string | null;
+  gameType?: string;
 };
 
 export async function createSession(payload: CreateSessionPayload) {
