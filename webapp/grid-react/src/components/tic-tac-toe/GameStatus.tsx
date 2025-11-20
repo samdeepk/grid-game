@@ -9,14 +9,34 @@ interface GameStatusProps {
 }
 
 export const GameStatus: React.FC<GameStatusProps> = ({ currentTurn, winner, draw, players }) => {
-  let currentName: string | null = null;
-  if (players) {
-    const matched = players.find((p) => (typeof p === 'string' ? p === currentTurn : (p as any).id === currentTurn));
+  // Helper to get player display (icon + name)
+  const getPlayerDisplay = (playerId: PlayerId | null): string => {
+    if (!playerId) return '';
+    if (!players) return String(playerId);
+    
+    const matched = players.find((p) => {
+      if (typeof p === 'string' || typeof p === 'number') {
+        return p === playerId;
+      }
+      return (p as any).id === playerId;
+    });
+    
     if (matched && typeof matched !== 'string' && typeof matched !== 'number') {
-      currentName = (matched as any).name ?? String((matched as any).id);
+      const player = matched as any;
+      const icon = player.icon ? `${player.icon} ` : '';
+      const name = player.name ?? String(player.id);
+      return `${icon}${name}`;
     }
+    
+    return String(playerId);
+  };
+
+  if (winner) {
+    const winnerDisplay = getPlayerDisplay(winner);
+    return <div className="ttt-status">Winner: {winnerDisplay}</div>;
   }
-  if (winner) return <div className="ttt-status">Winner: {winner}</div>;
   if (draw) return <div className="ttt-status">Draw!</div>;
-  return <div className="ttt-status">Current turn: {currentName ?? currentTurn}</div>;
+  
+  const currentDisplay = getPlayerDisplay(currentTurn);
+  return <div className="ttt-status">Current turn: {currentDisplay}</div>;
 };

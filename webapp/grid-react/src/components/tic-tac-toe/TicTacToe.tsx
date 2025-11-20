@@ -118,7 +118,12 @@ export const TicTacToe: React.FC<TicTacToeProps> = ({ sessionId }) => {
     <div className="ttt-container">
       <PlayerInfo players={gameState.players as any} currentTurn={gameState.currentTurn} />
       <GameStatus currentTurn={gameState.currentTurn} winner={gameState.winner} draw={gameState.draw} players={gameState.players as any} />
-      <GameBoard board={gameState.board} onCellClick={handleCellClick} disabled={!!gameState.winner || gameState.draw} />
+      <GameBoard 
+        board={gameState.board} 
+        onCellClick={handleCellClick} 
+        disabled={!!gameState.winner || gameState.draw}
+        players={gameState.players as any}
+      />
     </div>
   );
 };
