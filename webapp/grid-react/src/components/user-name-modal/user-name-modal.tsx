@@ -54,7 +54,7 @@ const UserNameModal: FC<UserNameModalProps> = ({ isOpen, onSubmit, onClose, isLo
         </div>
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            <p className="welcome-text">Let's get started. What should we call you?</p>
+            <p className="welcome-text">Let&apos;s get started. What should we call you?</p>
             <div className="form-group">
               <label className="label" htmlFor="user-name">
                 Your Name

@@ -1,13 +1,11 @@
-// Shared types for Connect 4 state, moves, and players
-
-export type PlayerId = number | string;
+import { Player, PlayerId } from '../../types/game';
 
 export type CellValue = PlayerId | null;
 
 export interface GameState {
   board: CellValue[][]; // 6x7 grid
   currentTurn: PlayerId;
-  players: Array<PlayerId | { id: PlayerId; icon?: string; name?: string }>;
+  players: Player[];
   winner: PlayerId | null;
   draw: boolean;
 }

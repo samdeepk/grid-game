@@ -17,12 +17,12 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY requirements.txt /tmp/requirements.txt
+COPY server/py3/requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r /tmp/requirements.txt \
     && rm -f /tmp/requirements.txt
 
-COPY . /app
+COPY server/py3 /app
 RUN chmod +x /app/entrypoint.sh
 
 ENV PYTHONPATH=/app

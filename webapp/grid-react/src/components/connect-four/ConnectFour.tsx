@@ -4,7 +4,10 @@ import { getUserId } from '../../utils/userStorage';
 import { ConnectFourBoard } from './ConnectFourBoard';
 import { GameStatus } from '../tic-tac-toe/GameStatus';
 import { PlayerInfo } from '../tic-tac-toe/PlayerInfo';
-import { GameState, Move, PlayerId } from './types';
+import { GameState, Move,  } from './types';
+import {  PlayerId } from '../../types/game';
+
+
 import './connect-four.scss';
 
 // Utility to create an empty 6x7 board
@@ -40,13 +43,7 @@ function applyMove(state: GameState, move: Move): GameState {
     board: newBoard,
     winner: winner ? move.player : null,
     draw,
-    currentTurn:
-      (() => {
-        const other = state.players.find((p: any) => (typeof p === 'string' ? p !== move.player : p.id !== move.player));
-        if (typeof other === 'string' || typeof other === 'number') return other;
-        if (typeof other === 'object') return other?.id || state.currentTurn;
-        return state.currentTurn;
-      })(),
+    currentTurn: state.players.find((p) => p.id !== move.player)?.id ?? state.currentTurn,
   };
 }
 
@@ -157,7 +154,7 @@ export const ConnectFour: React.FC<ConnectFourProps> = ({ sessionId }) => {
         const remoteState: GameState = {
           board: session.board as any,
           currentTurn: session.currentTurn ?? session.players[0].id,
-          players: session.players.map((p: any) => ({ id: p.id, name: p.name, icon: p.icon })),
+        players: session.players.map((p: any) => ({ id: p.id, name: p.name, icon: p.icon })),
           winner: session.winner ?? null,
           draw: !!session.draw,
         };
@@ -183,18 +180,18 @@ export const ConnectFour: React.FC<ConnectFourProps> = ({ sessionId }) => {
 
   return (
     <div className="c4-container">
-      <PlayerInfo players={gameState.players as any} currentTurn={gameState.currentTurn} />
+      <PlayerInfo players={gameState.players} currentTurn={gameState.currentTurn} />
       <GameStatus 
         currentTurn={gameState.currentTurn} 
         winner={gameState.winner} 
         draw={gameState.draw} 
-        players={gameState.players as any} 
+        players={gameState.players} 
       />
       <ConnectFourBoard 
         board={gameState.board} 
         onColumnClick={handleColumnClick} 
         disabled={!!gameState.winner || gameState.draw}
-        players={gameState.players as any}
+        players={gameState.players}
       />
     </div>
   );

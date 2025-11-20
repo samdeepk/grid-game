@@ -2,10 +2,10 @@
 .gitignore
 
 # Node / frontend artifacts
-webapp/
 node_modules/
-pnpm-lock.yaml
-package-lock.json
+webapp/grid-react/.next/
+webapp/grid-react/out/
+webapp/grid-react/node_modules/
 
 # Python caches and environments
 __pycache__/
