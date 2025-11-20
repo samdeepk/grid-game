@@ -51,6 +51,96 @@ def connect_with_retries(max_retries=5, base_delay=1.0):
             print(f"Connection failed (attempt {attempt}/{max_retries}): {e}. Retrying in {delay:.1f}s...")
             time.sleep(delay)
 
+
+import psycopg2
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env
+load_dotenv()
+
+# Fetch variables
+USER = os.getenv("user")
+PASSWORD = os.getenv("password")
+HOST = os.getenv("host")
+PORT = os.getenv("port")
+DBNAME = os.getenv("dbname")
+
+# Connect to the database
+try:
+    connection = psycopg2.connect(
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT,
+        dbname=DBNAME
+    )
+    print("Connection successful!")
+    
+    # Create a cursor to execute SQL queries
+    cursor = connection.cursor()
+    
+    # Example query
+    cursor.execute("SELECT NOW();")
+    result = cursor.fetchone()
+    print("Current Time:", result)
+
+    # Close the cursor and connection
+    cursor.close()
+    connection.close()
+    print("Connection closed.")
+
+except Exception as e:
+    print(f"Failed to connect: {e}")
+    
+
+import psycopg2
+from dotenv import load_dotenv
+import os
+
+def test():
+
+    # Load environment variables from .env
+
+    # Load environment variables from .env
+    load_dotenv()
+
+    # Fetch variables
+    USER = os.getenv("user")
+    PASSWORD = os.getenv("password")
+    HOST = os.getenv("host")
+    PORT = os.getenv("port")
+    DBNAME = os.getenv("dbname")
+
+    print ("USER, PASSWORD, HOST, PORT, DBNAME  -------->>>> ", USER, PASSWORD, HOST, PORT, DBNAME)
+    # Connect to the database
+    try:
+        connection = psycopg2.connect(
+            user=USER,
+            password=PASSWORD,
+            host=HOST,
+            port=PORT,
+            dbname=DBNAME
+        )
+        print("Connection successful!")
+        
+        # Create a cursor to execute SQL queries
+        cursor = connection.cursor()
+        
+        # Example query
+        cursor.execute("SELECT NOW();")
+        result = cursor.fetchone()
+        print("Current Time:", result)
+
+        # Close the cursor and connection
+        cursor.close()
+        connection.close()
+        print("Connection closed.")
+
+    except Exception as e:
+        print(f"Failed to connect: {e}")
+
+
 def main():
     with connect_with_retries() as conn:
         with conn.cursor() as cur:
@@ -58,4 +148,4 @@ def main():
             print(cur.fetchone())
 
 if __name__ == "__main__":
-    main()
+    test()

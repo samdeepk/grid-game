@@ -9,7 +9,7 @@ from sqlalchemy import select, func as sql_func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from database import close_db, get_db, init_db
+from database import get_db, init_db
 from models import Game, Session, User, Move
 from game_logic import get_game_logic
 
@@ -36,11 +36,11 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown
-    try:
-        await close_db()
-    except Exception:
-        pass  # Ignore errors on shutdown
+    # # Shutdown
+    # try:
+    #     await close_db()
+    # except Exception:
+    #     pass  # Ignore errors on shutdown
 
 
 app = FastAPI(lifespan=lifespan)
