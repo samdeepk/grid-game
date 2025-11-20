@@ -6,77 +6,58 @@ import Gamelist from '../src/components/game-list/game-list';
 import CreateGameModal from '../src/components/create-game-modal/create-game-modal';
 import UserNameModal from '../src/components/user-name-modal/user-name-modal';
 import { JoinGameByCode } from '../src/components/join-game-by-code/join-game-by-code';
-import { getUserName, setUserName, getUserId, setUserId, setUserIcon } from '../src/utils/userStorage';
-import { createSession, createUser, type Session } from '../src/utils/api';
+import { createSession, createUser } from '../src/utils/api';
+import { useUser } from '../src/context/UserContext';
+import { useToast } from '../src/context/ToastContext';
 import '../src/App.css';
 
 export default function Home() {
   const router = useRouter();
+  const { user, isLoading: isUserLoading, login } = useUser();
+  const { showToast } = useToast();
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUserNameModalOpen, setIsUserNameModalOpen] = useState(false);
-  const [userName, setUserNameState] = useState<string | null>(null);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [userId, setUserIdState] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [pendingGameCreation, setPendingGameCreation] = useState(false);
-  const [createdSession, setCreatedSession] = useState<Session | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mark component as mounted (client-side only)
-    setMounted(true);
-    
-    // Check if user name exists on mount (only runs on client)
-    const storedUserName = getUserName();
-    const storedUserId = getUserId();
-    if (storedUserName) {
-      setUserNameState(storedUserName);
-    }
-    if (storedUserId) {
-      setUserIdState(storedUserId);
-    } else {
-      // If no user ID exists, automatically show user name modal (blocking)
+    if (!isUserLoading && !user) {
       setIsUserNameModalOpen(true);
     }
-  }, []);
+  }, [isUserLoading, user]);
 
   const createGame = () => {
-    // Check if user has a name before allowing game creation
-    if (mounted && userName) {
-      // User has a name, proceed with game creation
-    setIsModalOpen(true);
+    if (user) {
+      setIsModalOpen(true);
     } else {
-      // User doesn't have a name, prompt for it first
       setPendingGameCreation(true);
       setIsUserNameModalOpen(true);
     }
   };
 
   const handleGameSubmit = async (icon: string, gameType: string) => {
-    if (!userId) {
+    if (!user) {
       setPendingGameCreation(true);
       setIsUserNameModalOpen(true);
       return;
     }
 
     try {
-      setIsCreatingUser(true);
+      // Show loading state if needed, or just rely on async await
       const session = await createSession({
-        hostId: userId,
-        hostName: userName || undefined,
+        hostId: user.id,
+        hostName: user.name,
         gameIcon: icon,
         gameType: gameType,
       });
-      console.log('Created session', session);
       setIsModalOpen(false);
-      setCreatedSession(session);
-      // Navigate to waiting room after creating session
+      showToast('Game created successfully!', 'success');
       router.push(`/waiting/${session.id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating session:', error);
-      alert('Failed to create session. Please try again.');
-    } finally {
-      setIsCreatingUser(false);
+      showToast(error.message || 'Failed to create session', 'error');
     }
   };
 
@@ -84,81 +65,91 @@ export default function Home() {
     setIsCreatingUser(true);
     try {
       const userData = await createUser(name, icon);
-      setUserName(userData.name);
-      setUserId(userData.id);
-      setUserNameState(userData.name);
-      setUserIdState(userData.id);
-      if (userData.icon) {
-        setUserIcon(userData.icon);
-      }
-    setIsUserNameModalOpen(false);
+      login(userData.id, userData.name, userData.icon);
       
-      // If user was trying to create a game, open the create game modal now
+      setIsUserNameModalOpen(false);
+      showToast(`Welcome, ${userData.name}!`, 'success');
+      
       if (pendingGameCreation) {
         setPendingGameCreation(false);
         setIsModalOpen(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating user:', error);
-      alert('Failed to create user. Please try again.');
+      showToast(error.message || 'Failed to create user', 'error');
     } finally {
       setIsCreatingUser(false);
     }
   };
 
-  // Don't render main content if user modal is open and user hasn't been set up yet
-  if (mounted && !userId && isUserNameModalOpen) {
+  if (isUserLoading) {
+    return <div className="loading-screen">Loading...</div>;
+  }
+
+  // Blocking modal if no user
+  if (!user && isUserNameModalOpen) {
     return (
-      <>
-        <UserNameModal
-          isOpen={isUserNameModalOpen}
-          onSubmit={handleUserNameSubmit}
-          isLoading={isCreatingUser}
-          onClose={undefined} // Blocking - no close button
-          isBlocking={true}
-        />
-      </>
+      <UserNameModal
+        isOpen={isUserNameModalOpen}
+        onSubmit={handleUserNameSubmit}
+        isLoading={isCreatingUser}
+        onClose={undefined}
+        isBlocking={true}
+      />
     );
   }
 
   return (
-    <>
-      <h1>Grid Game</h1>
-      {mounted && userName && <p>Welcome back, {userName}!</p>}
-      
-      <div className="home-actions">
-        <div className="card">
-          <h3>Join Game by Code</h3>
-          {joinError && (
-            <div className="error-message">
-              {joinError}
+    <div className="home-container">
+      <header className="home-header">
+        <div>
+          <p className="eyebrow">Welcome to</p>
+          <h1 className="home-title">Grid Game</h1>
+        </div>
+        {user && <p className="home-subtitle">Welcome back, {user.name}!</p>}
+      </header>
+
+      <div className="home-grid">
+        <section className="home-actions">
+          <div className="card">
+            <div className="card-header">
+              <h3>Join Game by Code</h3>
+              <p>Jump into an existing match instantly</p>
             </div>
-          )}
-          <JoinGameByCode
-            onError={(message) => {
-              setJoinError(message);
-              setTimeout(() => setJoinError(null), 5000);
-            }}
+            {joinError && (
+              <div className="error-message">
+                {joinError}
+              </div>
+            )}
+            <JoinGameByCode
+              onError={(message) => {
+                setJoinError(message);
+                setTimeout(() => setJoinError(null), 5000);
+              }}
+            />
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <h3>Create New Game</h3>
+              <p>Start a fresh session and invite a friend</p>
+            </div>
+            <button onClick={createGame} className="button-primary">
+              Create New Game
+            </button>
+          </div>
+        </section>
+
+        <section className="card home-games-card">
+          <div className="card-header">
+            <h2>Your Games</h2>
+            <p>Games you watched, started or played</p>
+          </div>
+          <Gamelist
+            onOpenCreateGameModal={createGame}
+            onOpenUserNameModal={() => setIsUserNameModalOpen(true)}
           />
-        </div>
-
-        <div className="card">
-          <h3>Create New Game</h3>
-          <button onClick={createGame} className="button-primary" style={{ width: '100%', marginTop: '8px' }}>
-            Create New Game
-          </button>
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>Your Games</h2>
-        <p style={{ color: '#6b7280', marginBottom: '16px', fontSize: '0.875rem' }}>
-          Games you watched, started or played
-        </p>
-        <Gamelist
-          onOpenCreateGameModal={createGame}
-          onOpenUserNameModal={() => setIsUserNameModalOpen(true)}
-        />
+        </section>
       </div>
 
       <CreateGameModal
@@ -166,16 +157,19 @@ export default function Home() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleGameSubmit}
       />
-      <UserNameModal
-        isOpen={isUserNameModalOpen && !!userId}
-        onSubmit={handleUserNameSubmit}
-        isLoading={isCreatingUser}
-        onClose={() => {
-          setIsUserNameModalOpen(false);
-          setPendingGameCreation(false);
-        }}
-      />
-    </>
+      
+      {/* Non-blocking modal if user wants to change name later (though UI for opening it isn't explicit here yet) */}
+      {user && (
+        <UserNameModal
+          isOpen={isUserNameModalOpen}
+          onSubmit={handleUserNameSubmit}
+          isLoading={isCreatingUser}
+          onClose={() => {
+            setIsUserNameModalOpen(false);
+            setPendingGameCreation(false);
+          }}
+        />
+      )}
+    </div>
   );
 }
-

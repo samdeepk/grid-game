@@ -41,6 +41,9 @@ grid-react/
 │   └── page.tsx      # Home page
 ├── src/
 │   ├── components/  # React components
+│   ├── context/     # React Contexts (User, Toast)
+│   ├── hooks/       # Custom React Hooks
+│   ├── types/       # Shared TypeScript types
 │   ├── utils/       # Utility functions
 │   └── *.css       # Global styles
 └── public/          # Static assets
@@ -53,6 +56,12 @@ grid-react/
 - **TypeScript** - Type safety
 - **SCSS** - Styling
 - **pnpm** - Package manager
+
+## Architecture Highlights
+
+- **Context API**: User authentication and Toast notifications are managed via React Context (`UserContext`, `ToastContext`).
+- **Custom Hooks**: Logic is encapsulated in hooks like `useGameSession`, `useTicTacToe` for better separation of concerns.
+- **Providers**: The app is wrapped in a global `Providers` component in the root layout.
 
 ## Backend API Proxy
 

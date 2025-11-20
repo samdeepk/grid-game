@@ -1,42 +1,22 @@
 import React from 'react';
-import { PlayerId } from './types';
+import { Player, PlayerId } from '../../types/game';
 
 interface GameStatusProps {
-  currentTurn: PlayerId;
+  currentTurn: PlayerId | null;
   winner: PlayerId | null;
-  draw: boolean;
-  players?: Array<PlayerId | { id: PlayerId; name?: string; icon?: string }>;
+  draw?: boolean;
+  players: Player[];
 }
 
 export const GameStatus: React.FC<GameStatusProps> = ({ currentTurn, winner, draw, players }) => {
-  // Helper to get player display (icon + name)
-  const getPlayerDisplay = (playerId: PlayerId | null): string => {
-    if (!playerId) return '';
-    if (!players) return String(playerId);
-    
-    const matched = players.find((p) => {
-      if (typeof p === 'string' || typeof p === 'number') {
-        return p === playerId;
-      }
-      return (p as any).id === playerId;
-    });
-    
-    if (matched && typeof matched !== 'string' && typeof matched !== 'number') {
-      const player = matched as any;
-      const icon = player.icon ? `${player.icon} ` : '';
-      const name = player.name ?? String(player.id);
-      return `${icon}${name}`;
-    }
-    
-    return String(playerId);
+  const getPlayerName = (id: PlayerId | null) => {
+    if (!id) return '';
+    const p = players.find((player) => player.id === id);
+    return p ? p.name : id;
   };
 
-  if (winner) {
-    const winnerDisplay = getPlayerDisplay(winner);
-    return <div className="ttt-status">Winner: {winnerDisplay}</div>;
-  }
-  if (draw) return <div className="ttt-status">Draw!</div>;
+  if (winner) return <div className="ttt-status winner">Winner: {getPlayerName(winner)}! 🎉</div>;
+  if (draw) return <div className="ttt-status draw">It's a Draw! 🤝</div>;
   
-  const currentDisplay = getPlayerDisplay(currentTurn);
-  return <div className="ttt-status">Current turn: {currentDisplay}</div>;
+  return <div className="ttt-status">Current turn: {getPlayerName(currentTurn)}</div>;
 };
