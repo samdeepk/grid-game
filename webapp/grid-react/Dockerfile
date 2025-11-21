@@ -12,7 +12,7 @@ COPY . .
 RUN corepack enable && pnpm build
 
 FROM node:20-alpine AS runner
-ARG NEXT_PUBLIC_API_BASE_URL
+ARG NEXT_PUBLIC_API_PROXY_TARGET
 
 WORKDIR /app
 ENV NODE_ENV=production \
