@@ -16,8 +16,17 @@ RUN echo "*******  NEXT_PUBLIC_API_BASE_URL $NEXT_PUBLIC_API_PROXY_TARGET"
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+ARG NEXT_PUBLIC_API_PROXY_TARGET
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Override the repository .env so Next.js picks up the desired base URL at build time
+RUN if [ -n "${NEXT_PUBLIC_API_PROXY_TARGET}" ]; then \
+      printf "NEXT_PUBLIC_API_BASE_URL=%s\n" "${NEXT_PUBLIC_API_PROXY_TARGET}" > .env; \
+    else \
+      printf "NEXT_PUBLIC_API_BASE_URL=/api/\n" > .env; \
+    fi
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_PROXY_TARGET}
 RUN corepack enable && pnpm build
 
 FROM node:20-alpine AS runner
