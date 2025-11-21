@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from pydantic import BaseModel
@@ -54,6 +55,24 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+default_origins = [
+    "https://play.gridgame.com",
+    "http://localhost:3000",
+]
+raw_cors = os.environ.get("CORS_ALLOWED_ORIGINS", "")
+if raw_cors:
+    origins = [origin.strip() for origin in raw_cors.split(",") if origin.strip()]
+else:
+    origins = default_origins
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get('/healthz')
