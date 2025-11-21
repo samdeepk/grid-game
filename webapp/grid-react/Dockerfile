@@ -20,9 +20,9 @@ ENV NODE_ENV=production \
 
 # Note: NEXT_PUBLIC_* vars are baked into the build at build time
 # This is only for runtime override if needed
-ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_PROXY_TARGET}
 
-RUN echo "*******  NEXT_PUBLIC_API_BASE_URL $NEXT_PUBLIC_API_BASE_URL"
+RUN echo "*******  NEXT_PUBLIC_API_BASE_URL $NEXT_PUBLIC_API_PROXY_TARGET"
 
 # Create non-root user
 RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
