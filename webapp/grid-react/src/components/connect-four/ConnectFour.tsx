@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { getSession as apiGetSession, pollSession, makeMove as apiMakeMove } from '../../utils/api';
 import { getUserId } from '../../utils/userStorage';
 import { ConnectFourBoard } from './ConnectFourBoard';
@@ -109,10 +109,22 @@ interface ConnectFourProps {
 
 export const ConnectFour: React.FC<ConnectFourProps> = ({ sessionId }) => {
   const [gameState, setGameState] = useState<GameState>(initialState);
+  const currentUserId = getUserId();
+
+  // Check if it's the current user's turn
+  const isMyTurn = useMemo(() => {
+    if (!sessionId || !currentUserId) return false;
+    return gameState.currentTurn === currentUserId;
+  }, [sessionId, currentUserId, gameState.currentTurn]);
 
   // Handle column click - drop piece in that column
   const handleColumnClick = async (col: number) => {
     if (gameState.winner || gameState.draw) return;
+    
+    // Disable if it's not the user's turn
+    if (sessionId && !isMyTurn) {
+      return;
+    }
     
     if (sessionId) {
       const playerId = getUserId();
@@ -196,7 +208,7 @@ export const ConnectFour: React.FC<ConnectFourProps> = ({ sessionId }) => {
       <ConnectFourBoard 
         board={gameState.board} 
         onColumnClick={handleColumnClick} 
-        disabled={!!gameState.winner || gameState.draw}
+        disabled={!!gameState.winner || gameState.draw || (!!sessionId && !isMyTurn)}
         players={gameState.players}
       />
     </div>

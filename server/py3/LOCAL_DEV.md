@@ -6,7 +6,7 @@ This guide will help you set up a local PostgreSQL database for development.
 
 1. **Run the setup script:**
    ```bash
-   cd server/python
+   cd server/py3
    ./setup-local-db.sh
    ```
 
@@ -17,7 +17,7 @@ This guide will help you set up a local PostgreSQL database for development.
 
 2. **Start the FastAPI server:**
    ```bash
-   source v/bin/activate
+   source .venv/bin/activate
    uvicorn main:app --reload
    ```
 
@@ -28,7 +28,7 @@ If you prefer to set up manually:
 ### 1. Start PostgreSQL with Docker
 
 ```bash
-cd server/python
+cd server/py3
 docker-compose up -d
 ```
 

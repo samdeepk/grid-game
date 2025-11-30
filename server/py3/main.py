@@ -144,6 +144,7 @@ def serialize_session(session: Session, moves: Optional[List[Move]] = None) -> d
         'winner': session.winner,
         'draw': session.draw,
         'gameIcon': session.game_icon,
+        'gameType': session.game_type,
         'createdAt': session.created_at.isoformat() if session.created_at else None,
     }
 
@@ -165,6 +166,7 @@ def serialize_session_list_item(session: Session) -> dict:
         'id': session.id,
         'host': {'id': session.host_id, 'name': session.host_name, 'icon': session.host_icon},
         'gameIcon': session.game_icon,
+        'gameType': session.game_type,
         'status': session.status,
         'players': players,
         'createdAt': session.created_at.isoformat() if session.created_at else None,
