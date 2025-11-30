@@ -4,9 +4,6 @@ const API_PROXY_TARGET =
   process.env.API_PROXY_TARGET ||
   'http://127.0.0.1:8000';
 
-console.log("API_PROXY_TARGET **********  ", API_PROXY_TARGET, process.env)
-console.log("API_PROXY_TARGET **********  ", API_PROXY_TARGET, process.env)
-
 
 const nextConfig = {
   reactStrictMode: true,

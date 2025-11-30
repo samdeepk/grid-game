@@ -163,17 +163,23 @@ export const ConnectFour: React.FC<ConnectFourProps> = ({ sessionId }) => {
     })();
     
     // Poll for updates
-    const unsub = pollSession(sessionId, (s) => {
-      if (!s) return;
-      const remoteState: GameState = {
-        board: s.board as any,
-        currentTurn: s.currentTurn ?? s.players[0].id,
-        players: s.players.map((p: any) => ({ id: p.id, name: p.name, icon: p.icon })),
-        winner: s.winner ?? null,
-        draw: !!s.draw,
-      };
-      setGameState(remoteState);
-    });
+    const unsub = pollSession(
+      sessionId,
+      (s) => {
+        if (!s) return;
+        const remoteState: GameState = {
+          board: s.board as any,
+          currentTurn: s.currentTurn ?? s.players[0].id,
+          players: s.players.map((p: any) => ({ id: p.id, name: p.name, icon: p.icon })),
+          winner: s.winner ?? null,
+          draw: !!s.draw,
+        };
+        setGameState(remoteState);
+      },
+      {
+        stopWhen: (session) => !!session?.winner || !!session?.draw || session?.status === 'FINISHED',
+      },
+    );
     
     return () => unsub();
   }, [sessionId]);

@@ -40,6 +40,12 @@ export type SessionsListResponse = {
   nextCursor: string | null;
 };
 
+export type PollSessionOptions = {
+  intervalMs?: number;
+  maxDurationMs?: number;
+  stopWhen?: (session: Session | null) => boolean;
+};
+
 export async function createUser(name: string, icon?: string) {
   return await jsonFetch('/users', {
     method: 'POST',
@@ -101,19 +107,52 @@ export async function listSessions(params?: {
   return await jsonFetch(path) as SessionsListResponse;
 }
 
-// Poll for changes every `intervalMs`. Returns a function to cancel
-export function pollSession(sessionId: string, cb: (s: Session | null) => void, intervalMs = 1200) {
+// Poll for changes. Returns a function to cancel
+export function pollSession(
+  sessionId: string,
+  cb: (s: Session | null) => void,
+  options: number | PollSessionOptions = {},
+) {
+  const resolvedOptions: PollSessionOptions =
+    typeof options === 'number' ? { intervalMs: options } : options;
+
+  const intervalMs = resolvedOptions.intervalMs ?? 1200;
+  const maxDurationMs = resolvedOptions.maxDurationMs;
+  const stopWhen = resolvedOptions.stopWhen;
+
   let cancelled = false;
+  const startedAt = Date.now();
+
+  const shouldStopForDuration = () =>
+    typeof maxDurationMs === 'number' && maxDurationMs > 0 && Date.now() - startedAt >= maxDurationMs;
+
   async function tick() {
+    if (cancelled || shouldStopForDuration()) {
+      cancelled = true;
+      return;
+    }
+
+    let session: Session | null = null;
     try {
-      const s = await getSession(sessionId);
-      if (!cancelled) cb(s);
+      session = await getSession(sessionId);
+      if (!cancelled) cb(session);
     } catch (e) {
       if (!cancelled) cb(null);
     }
+
     if (cancelled) return;
+    if (stopWhen && stopWhen(session)) {
+      cancelled = true;
+      return;
+    }
+    if (shouldStopForDuration()) {
+      cancelled = true;
+      return;
+    }
+
     setTimeout(() => tick(), intervalMs);
   }
+
   tick();
   return () => {
     cancelled = true;

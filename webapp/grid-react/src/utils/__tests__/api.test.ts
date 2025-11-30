@@ -326,7 +326,7 @@ describe('API Client Integration Tests', () => {
       } as Response);
 
       const callback = jest.fn();
-      const cancel = pollSession('session-123', callback, 1000);
+      const cancel = pollSession('session-123', callback, { intervalMs: 1000 });
 
       // Fast-forward time to trigger polling
       jest.advanceTimersByTime(1000);
@@ -335,6 +335,72 @@ describe('API Client Integration Tests', () => {
       expect(callback).toHaveBeenCalledWith(mockSession);
 
       cancel();
+      jest.useRealTimers();
+    });
+
+    it('should stop polling after reaching maxDurationMs', async () => {
+      jest.useFakeTimers();
+
+      const mockSession: Session = {
+        id: 'session-123',
+        players: [{ id: 'user-123', name: 'Alice', icon: '😀' }],
+        status: 'ACTIVE',
+        currentTurn: 'user-123',
+        board: [[null]],
+        moves: [],
+        winner: null,
+        draw: false,
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockSession,
+        headers: new Headers({ 'content-type': 'application/json' }),
+      } as Response);
+
+      const callback = jest.fn();
+      pollSession('session-123', callback, { intervalMs: 500, maxDurationMs: 1000 });
+
+      jest.advanceTimersByTime(2000);
+      await Promise.resolve();
+
+      // Should have been called only twice (initial + one interval) before timing out
+      expect(callback).toHaveBeenCalledTimes(2);
+
+      jest.useRealTimers();
+    });
+
+    it('should stop polling when stopWhen returns true', async () => {
+      jest.useFakeTimers();
+
+      const mockSession: Session = {
+        id: 'session-123',
+        players: [{ id: 'user-123', name: 'Alice', icon: '😀' }],
+        status: 'FINISHED',
+        currentTurn: null,
+        board: [[null]],
+        moves: [],
+        winner: 'user-123',
+        draw: false,
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockSession,
+        headers: new Headers({ 'content-type': 'application/json' }),
+      } as Response);
+
+      const callback = jest.fn();
+      pollSession('session-123', callback, {
+        intervalMs: 500,
+        stopWhen: (session) => !!session?.winner,
+      });
+
+      jest.advanceTimersByTime(2000);
+      await Promise.resolve();
+
+      expect(callback).toHaveBeenCalledTimes(1);
+
       jest.useRealTimers();
     });
   });

@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSession, pollSession, Session } from '../utils/api';
+import {
+  getSession,
+  pollSession,
+  type PollSessionOptions,
+  type Session,
+} from '../utils/api';
 import { GameSession } from '../types/game';
 
 interface UseGameSessionResult {
@@ -9,7 +14,12 @@ interface UseGameSessionResult {
   refresh: () => Promise<void>;
 }
 
-export const useGameSession = (sessionId?: string): UseGameSessionResult => {
+export type UseGameSessionOptions = PollSessionOptions;
+
+export const useGameSession = (
+  sessionId?: string,
+  pollOptions?: UseGameSessionOptions,
+): UseGameSessionResult => {
   const [session, setSession] = useState<GameSession | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,17 +48,29 @@ export const useGameSession = (sessionId?: string): UseGameSessionResult => {
     setLoading(true);
     fetchSession();
 
-    const unsub = pollSession(sessionId, (data: Session | null) => {
-      if (data) {
-        setSession(data as unknown as GameSession);
-        setError(null);
-      }
-    });
+    const defaultStopCondition = (data: Session | null) =>
+      !!data?.winner || !!data?.draw || data?.status === 'FINISHED';
+
+    const mergedOptions: PollSessionOptions = {
+      ...pollOptions,
+      stopWhen: pollOptions?.stopWhen ?? defaultStopCondition,
+    };
+
+    const unsub = pollSession(
+      sessionId,
+      (data: Session | null) => {
+        if (data) {
+          setSession(data as unknown as GameSession);
+          setError(null);
+        }
+      },
+      mergedOptions,
+    );
 
     return () => {
       unsub();
     };
-  }, [sessionId, fetchSession]);
+  }, [sessionId, fetchSession, pollOptions]);
 
   return { session, loading, error, refresh: fetchSession };
 };

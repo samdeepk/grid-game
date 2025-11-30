@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useGameSession } from '../../hooks/useGameSession';
+import { useGameSession, type UseGameSessionOptions } from '../../hooks/useGameSession';
 import { useToast } from '../../context/ToastContext';
 import './waiting-room.scss';
+
+const WAITING_ROOM_TIMEOUT_MS = 3 * 60 * 1000;
 
 interface WaitingRoomProps {
   sessionId: string;
@@ -10,7 +12,11 @@ interface WaitingRoomProps {
 
 export const WaitingRoom: React.FC<WaitingRoomProps> = ({ sessionId }) => {
   const router = useRouter();
-  const { session, loading, error } = useGameSession(sessionId);
+  const waitingPollOptions = useMemo<UseGameSessionOptions>(() => ({
+    maxDurationMs: WAITING_ROOM_TIMEOUT_MS,
+    stopWhen: (data) => data?.status === 'ACTIVE' || data?.status === 'FINISHED',
+  }), []);
+  const { session, loading, error } = useGameSession(sessionId, waitingPollOptions);
   const [joinLink, setJoinLink] = useState('');
   const { showToast } = useToast();
 
