@@ -19,11 +19,13 @@ from models import Game, Session, User, Move
 from game_logic import get_game_logic
 
 
-import os, json
+import os
+import json
 
 target = os.environ.get("DIRECT_URL")
 print("Proxy target:", target)
 print("Proxy target:", json.dumps(dict(os.environ), indent=2))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,9 +46,9 @@ async def lifespan(app: FastAPI):
         print('4. Verify your Supabase database is accessible')
         print('\nYou can test the connection with: python debug_connection.py')
         # Don't raise - allow app to start without DB
-    
+
     yield
-    
+
     # # Shutdown
     # try:
     #     await close_db()
@@ -62,7 +64,8 @@ default_origins = [
 ]
 raw_cors = os.environ.get("CORS_ALLOWED_ORIGINS", "")
 if raw_cors:
-    origins = [origin.strip() for origin in raw_cors.split(",") if origin.strip()]
+    origins = [origin.strip()
+               for origin in raw_cors.split(",") if origin.strip()]
 else:
     origins = default_origins
 
@@ -109,7 +112,7 @@ def serialize_session(session: Session, moves: Optional[List[Move]] = None) -> d
     players = [
         {'id': session.host_id, 'name': session.host_name, 'icon': session.host_icon}
     ]
-    
+
     # Add guest if exists
     if session.guest_id:
         players.append({
@@ -117,10 +120,10 @@ def serialize_session(session: Session, moves: Optional[List[Move]] = None) -> d
             'name': session.guest_name,
             'icon': session.guest_icon
         })
-    
+
     # Get board state
     board = session.get_board()
-    
+
     # Serialize moves
     moves_list = []
     if moves:
@@ -133,7 +136,7 @@ def serialize_session(session: Session, moves: Optional[List[Move]] = None) -> d
             }
             for move in moves
         ]
-    
+
     return {
         'id': session.id,
         'players': players,
@@ -154,14 +157,14 @@ def serialize_session_list_item(session: Session) -> dict:
     players = [
         {'id': session.host_id, 'name': session.host_name, 'icon': session.host_icon}
     ]
-    
+
     if session.guest_id:
         players.append({
             'id': session.guest_id,
             'name': session.guest_name,
             'icon': session.guest_icon
         })
-    
+
     return {
         'id': session.id,
         'host': {'id': session.host_id, 'name': session.host_name, 'icon': session.host_icon},
@@ -173,13 +176,11 @@ def serialize_session_list_item(session: Session) -> dict:
     }
 
 
-
-
 @app.post('/users', status_code=status.HTTP_201_CREATED)
 async def create_user(payload: CreateUserRequest, db: AsyncSession = Depends(get_db)):
     """Create a new user using SQLAlchemy ORM."""
     user = User(id=str(uuid.uuid4()), name=payload.name, icon=payload.icon)
-            
+
     db.add(user)
     try:
         await db.commit()
@@ -212,10 +213,12 @@ async def create_session(payload: CreateSessionRequest, db: AsyncSession = Depen
     host_name = payload.hostName or host.name
     host_icon = payload.hostIcon if payload.hostIcon is not None else host.icon
 
+    game_type = payload.gameType or 'tic_tac_toe'
+    gird_size = (4, 4)
     # Initialize board for the game type
-    game_logic = get_game_logic(payload.gameType or 'tic_tac_toe')
+    game_logic = get_game_logic(game_type, board_size=gird_size)
     default_board = game_logic.get_default_board()
-    
+
     session = Session(
         id=str(uuid.uuid4()),
         host_id=host.id,
@@ -256,7 +259,8 @@ async def start_game(
             detail=f'User with id {user_id} not found',
         )
 
-    game = Game(id=str(uuid.uuid4()), user_id=user_id, name=name, icon=icon, status='active')
+    game = Game(id=str(uuid.uuid4()), user_id=user_id,
+                name=name, icon=icon, status='active')
     db.add(game)
     try:
         await db.commit()
@@ -305,27 +309,29 @@ async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
         .where(Session.id == session_id)
     )
     session = result.scalar_one_or_none()
-    
+
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='Session not found'
         )
-    
+
     return serialize_session(session, session.moves)
 
 
 @app.get('/sessions')
 async def list_sessions(
-    status: Optional[str] = Query(None, description='Filter by status: WAITING, ACTIVE, FINISHED'),
+    status: Optional[str] = Query(
+        None, description='Filter by status: WAITING, ACTIVE, FINISHED'),
     hostId: Optional[str] = Query(None, description='Filter by host user ID'),
-    limit: int = Query(20, ge=1, le=100, description='Number of results (1-100)'),
+    limit: int = Query(
+        20, ge=1, le=100, description='Number of results (1-100)'),
     cursor: Optional[str] = Query(None, description='Pagination cursor'),
     db: AsyncSession = Depends(get_db)
 ):
     """List sessions with filtering and pagination."""
     stmt = select(Session)
-    
+
     # Apply filters
     if status:
         if status not in ['WAITING', 'ACTIVE', 'FINISHED']:
@@ -334,16 +340,16 @@ async def list_sessions(
                 detail=f'Invalid status: {status}. Must be WAITING, ACTIVE, or FINISHED'
             )
         stmt = stmt.where(Session.status == status)
-    
+
     if hostId:
         stmt = stmt.where(Session.host_id == hostId)
-    
+
     # Order by created_at DESC
     stmt = stmt.order_by(Session.created_at.desc())
-    
+
     # Apply limit
     stmt = stmt.limit(limit)
-    
+
     # Simple cursor pagination (using offset for now)
     # In production, use cursor-based pagination with session ID or timestamp
     if cursor:
@@ -352,18 +358,18 @@ async def list_sessions(
             stmt = stmt.offset(offset)
         except ValueError:
             pass  # Ignore invalid cursor
-    
+
     result = await db.execute(stmt)
     sessions = result.scalars().all()
-    
+
     items = [serialize_session_list_item(session) for session in sessions]
-    
+
     # Simple next cursor (offset + limit)
     next_cursor = None
     if len(items) == limit:
         current_offset = int(cursor) if cursor else 0
         next_cursor = str(current_offset + limit)
-    
+
     return {
         'items': items,
         'nextCursor': next_cursor
@@ -384,64 +390,65 @@ async def join_session(
         .with_for_update()
     )
     session = result.scalar_one_or_none()
-    
+
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='Session not found'
         )
-    
+
     # Validate session status
     if session.status != 'WAITING':
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Cannot join session. Session status is {session.status}, must be WAITING'
         )
-    
+
     # Validate user exists
     user_result = await db.execute(select(User).where(User.id == payload.playerId))
     user = user_result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'User with id {payload.playerId} not found'
         )
-    
+
     # Check if user is already the host
     if session.host_id == payload.playerId:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='User is already the host of this session'
         )
-    
+
     # Check if session already has a guest
     if session.guest_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Session already has a guest player'
         )
-    
+
     # Add guest player
     session.guest_id = user.id
     session.guest_name = user.name
     session.guest_icon = user.icon
     session.status = 'ACTIVE'
     session.current_turn = session.host_id  # Host goes first
-    
+
     try:
         await db.commit()
         await db.refresh(session)
     except Exception:
         await db.rollback()
         raise
-    
+
     # Load moves for response
     moves_result = await db.execute(
-        select(Move).where(Move.session_id == session_id).order_by(Move.move_no)
+        select(Move).where(Move.session_id ==
+                           session_id).order_by(Move.move_no)
     )
     moves = moves_result.scalars().all()
-    
+
     return serialize_session(session, list(moves))
 
 
@@ -459,59 +466,61 @@ async def make_move(
         .with_for_update()
     )
     session = result.scalar_one_or_none()
-    
+
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='Session not found'
         )
-    
+
     # Validate session status
     if session.status != 'ACTIVE':
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f'Cannot make move. Session status is {session.status}, must be ACTIVE'
         )
-    
+
     # Validate player is in session
     if payload.playerId != session.host_id and payload.playerId != session.guest_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='Player is not part of this session'
         )
-    
+
     # Validate it's player's turn
     if session.current_turn != payload.playerId:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail='It is not your turn'
         )
-    
-    # Get game logic
-    game_logic = get_game_logic(session.game_type)
-    
+
+    # gird_size = (4, 4)
+    # Initialize board for the game type
+    game_logic = get_game_logic(session.game_type)  # , board_size=gird_size
+
     # Get current board
     board = session.get_board()
-    
+
     # Validate move
-    is_valid, error_msg = game_logic.validate_move(board, payload.row, payload.col, payload.playerId)
+    is_valid, error_msg = game_logic.validate_move(
+        board, payload.row, payload.col, payload.playerId)
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=error_msg or 'Invalid move'
         )
-    
+
     # Get move count for this session
     move_count_result = await db.execute(
         select(sql_func.count(Move.id)).where(Move.session_id == session_id)
     )
     move_count = move_count_result.scalar_one() or 0
     move_no = move_count + 1
-    
+
     # Update board
     board[payload.row][payload.col] = payload.playerId
     session.set_board(board)
-    
+
     # Create move record
     move = Move(
         id=str(uuid.uuid4()),
@@ -522,9 +531,10 @@ async def make_move(
         move_no=move_no
     )
     db.add(move)
-    
+
     # Check for winner
-    winner = game_logic.check_winner(board, payload.row, payload.col, payload.playerId)
+    winner = game_logic.check_winner(
+        board, payload.row, payload.col, payload.playerId)
     if winner:
         session.winner = winner
         session.status = 'FINISHED'
@@ -538,20 +548,21 @@ async def make_move(
         else:
             # Switch turn to other player
             session.current_turn = session.guest_id if payload.playerId == session.host_id else session.host_id
-    
+
     try:
         await db.commit()
         await db.refresh(session)
     except Exception:
         await db.rollback()
         raise
-    
+
     # Load all moves for response
     moves_result = await db.execute(
-        select(Move).where(Move.session_id == session_id).order_by(Move.move_no)
+        select(Move).where(Move.session_id ==
+                           session_id).order_by(Move.move_no)
     )
     moves = moves_result.scalars().all()
-    
+
     return serialize_session(session, list(moves))
 
 
@@ -563,6 +574,7 @@ async def leaderboard():
 
 STATIC_DIR = Path(__file__).parent / 'static'
 if STATIC_DIR.exists():
-    app.mount('/', StaticFiles(directory=str(STATIC_DIR), html=True), name='frontend')
+    app.mount('/', StaticFiles(directory=str(STATIC_DIR),
+              html=True), name='frontend')
 else:
     print('ℹ️  Frontend static bundle not found; skipping mount.')

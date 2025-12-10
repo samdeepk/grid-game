@@ -59,10 +59,10 @@ export const useGameSession = (
     const unsub = pollSession(
       sessionId,
       (data: Session | null) => {
-        if (data) {
-          setSession(data as unknown as GameSession);
-          setError(null);
-        }
+      if (data) {
+        setSession(data as unknown as GameSession);
+        setError(null);
+      }
       },
       mergedOptions,
     );

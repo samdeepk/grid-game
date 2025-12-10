@@ -178,15 +178,15 @@ export const ConnectFour: React.FC<ConnectFourProps> = ({ sessionId }) => {
     const unsub = pollSession(
       sessionId,
       (s) => {
-        if (!s) return;
-        const remoteState: GameState = {
-          board: s.board as any,
-          currentTurn: s.currentTurn ?? s.players[0].id,
-          players: s.players.map((p: any) => ({ id: p.id, name: p.name, icon: p.icon })),
-          winner: s.winner ?? null,
-          draw: !!s.draw,
-        };
-        setGameState(remoteState);
+      if (!s) return;
+      const remoteState: GameState = {
+        board: s.board as any,
+        currentTurn: s.currentTurn ?? s.players[0].id,
+        players: s.players.map((p: any) => ({ id: p.id, name: p.name, icon: p.icon })),
+        winner: s.winner ?? null,
+        draw: !!s.draw,
+      };
+      setGameState(remoteState);
       },
       {
         stopWhen: (session) => !!session?.winner || !!session?.draw || session?.status === 'FINISHED',
